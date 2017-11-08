@@ -1,0 +1,6 @@
+<map id="ad9361_from_clk" name="ad9361_from_clk">
+<area shape="rect" id="node2" href="$ad9361_8c.html#ace105933ca64808285704c5dec373d1d" title="ad9361_get_full_table_gain" alt="" coords="175,5,353,32"/>
+<area shape="rect" id="node3" href="$ad9361_8h.html#a22ff6a0acb70a2b6ba0caf154a01255f" title="ad9361_rssi_gain_step\l_calib" alt="" coords="187,57,341,98"/>
+<area shape="rect" id="node4" href="$ad9361__api_8h.html#a87c44a971bec14ca54e1455f1a967c45" title="ad9361_get_rx_lo_freq" alt="" coords="187,123,341,149"/>
+<area shape="rect" id="node5" href="$ad9361__api_8h.html#abf497bac9f654b8dec91a872f52fd417" title="ad9361_get_tx_lo_freq" alt="" coords="187,173,341,200"/>
+</map>

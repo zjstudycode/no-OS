@@ -1,0 +1,23 @@
+<map id="ad9361_rf_phy" name="ad9361_rf_phy">
+<area shape="rect" id="node2" href="$structaxiadc__state.html" title="axiadc_state" alt="" coords="811,527,907,553"/>
+<area shape="rect" id="node19" href="$structrefclk__scale.html" title="refclk_scale" alt="" coords="813,413,905,440"/>
+<area shape="rect" id="node3" href="$structad9361__phy__platform__data.html" title="ad9361_phy_platform_data" alt="" coords="287,309,465,336"/>
+<area shape="rect" id="node4" href="$structrssi__control.html" title="rssi_control" alt="" coords="37,259,127,285"/>
+<area shape="rect" id="node5" href="$structelna__control.html" title="elna_control" alt="" coords="36,309,128,336"/>
+<area shape="rect" id="node6" href="$structtx__monitor__control.html" title="tx_monitor_control" alt="" coords="17,360,147,387"/>
+<area shape="rect" id="node7" href="$structauxadc__control.html" title="auxadc_control" alt="" coords="27,411,137,437"/>
+<area shape="rect" id="node8" href="$structauxdac__control.html" title="auxdac_control" alt="" coords="27,461,137,488"/>
+<area shape="rect" id="node9" href="$structport__control.html" title="port_control" alt="" coords="37,56,127,83"/>
+<area shape="rect" id="node10" href="$structctrl__outs__control.html" title="ctrl_outs_control" alt="" coords="23,107,141,133"/>
+<area shape="rect" id="node11" href="$structgpo__control.html" title="gpo_control" alt="" coords="37,157,127,184"/>
+<area shape="rect" id="node12" href="$structgain__control.html" title="gain_control" alt="" coords="36,208,128,235"/>
+<area shape="rect" id="node13" href="$structad9361__fastlock.html" title="ad9361_fastlock" alt="" coords="317,599,435,625"/>
+<area shape="rect" id="node14" href="$structad9361__fastlock__entry.html" title="ad9361_fastlock_entry" alt="" coords="5,599,159,625"/>
+<area shape="rect" id="node15" href="$structspi__device.html" title="spi_device" alt="" coords="334,259,418,285"/>
+<area shape="rect" id="node16" href="$structdevice.html" title="device" alt="" coords="52,5,112,32"/>
+<area shape="rect" id="node17" href="$structaxiadc__converter.html" title="axiadc_converter" alt="" coords="315,700,437,727"/>
+<area shape="rect" id="node18" href="$structaxiadc__chip__info.html" title="axiadc_chip_info" alt="" coords="23,700,141,727"/>
+<area shape="rect" id="node20" href="$structrx__gain__info.html" title="rx_gain_info" alt="" coords="330,649,422,676"/>
+<area shape="rect" id="node21" href="$structclk__onecell__data.html" title="clk_onecell_data" alt="" coords="317,471,435,497"/>
+<area shape="rect" id="node22" href="$structclk.html" title="clk" alt="" coords="63,524,101,551"/>
+</map>

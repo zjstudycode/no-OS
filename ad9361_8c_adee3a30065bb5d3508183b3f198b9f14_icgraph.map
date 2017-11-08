@@ -1,0 +1,8 @@
+<map id="ad9361_spi_read" name="ad9361_spi_read">
+<area shape="rect" id="node2" href="$ad9361_8h.html#aca0327c8de5c3ce8df0a45df326721e4" title="ad9361_ensm_restore\l_prev_state" alt="" coords="181,5,332,47"/>
+<area shape="rect" id="node3" href="$ad9361_8c.html#aae0c13d5187f158a2bb69f40518c769b" title="ad9361_rx_adc_setup" alt="" coords="182,71,331,98"/>
+<area shape="rect" id="node4" href="$ad9361_8c.html#afc8ae55dbdc567fbe57f5d5a99c5ae01" title="ad9361_rx_tia_calib" alt="" coords="188,122,325,149"/>
+<area shape="rect" id="node5" href="$ad9361__api_8h.html#ad71bfdc4aa92c0ca06968b8ba9e34d9d" title="ad9361_get_en_state\l_machine_mode" alt="" coords="183,173,330,215"/>
+<area shape="rect" id="node6" href="$ad9361__api_8h.html#ac2f4ce5fe966c03db08b3e2a06d9ce29" title="ad9361_get_rx_fir_config" alt="" coords="173,239,340,266"/>
+<area shape="rect" id="node7" href="$ad9361__api_8h.html#a98ba653a3298a48af43825c71f663dd5" title="ad9361_get_tx_fir_config" alt="" coords="173,290,340,317"/>
+</map>
