@@ -212,6 +212,7 @@ err_t network_accept(void *arg, struct tcp_pcb *newpcb, err_t err)
 		es->retries = 0;
 		es->p = NULL;
 		es->instance_id = inst_id;
+		/* cppcheck-suppress uninitvar ; cppcheck reports this as a false positive */
 		HASH_ADD_INT( instances, instance_id, es );
 #ifdef DEBUG_NETWORK
 		printf("new clientconnected: %d\n", inst_id);
@@ -467,6 +468,7 @@ void network_write_data(int32_t instance_id, const char *buf, size_t len)
 	struct network_instance *instance = NULL;
 	u8_t apiflags = TCP_WRITE_FLAG_COPY;
 	const char *pbuffer = buf;
+	/* cppcheck-suppress uninitvar ; cppcheck reports this as a false positive */
 	HASH_FIND_INT( instances, &instance_id, instance);
 	if(instance == NULL)
 		return;
@@ -498,6 +500,7 @@ int32_t network_close_instance(int32_t instance_id)
 #ifdef DEBUG_NETWORK
 	printf("removing cleint instance: %d\n", instance_id);
 #endif // DEBUG_NETWORK
+	/* cppcheck-suppress uninitvar ; cppcheck reports this as a false positive */
 	HASH_FIND_INT( instances, &instance_id, instance);
 	if(instance == NULL)
 		return -ENOENT;
