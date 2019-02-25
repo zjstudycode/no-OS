@@ -2657,10 +2657,10 @@ const struct tinyiiod_ops ops = {
 #ifdef TCPIP_INTERFACE
 	.read = network_read,
 	.read_line = network_read_line,
-	.read_nonbloking = network_read_nonblocking,
+	.read_nonblocking = network_read_nonblocking,
 	.read_wait = network_read_wait,
 	.write = network_write_data,
-	.exit = network_exit,
+	.close_instance = network_close_instance,
 #endif /* TCPIP_INTERFACE */
 	/* device operations */
 	.read_attr = read_attr,
