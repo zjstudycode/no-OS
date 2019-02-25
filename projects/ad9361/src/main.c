@@ -52,6 +52,13 @@
 #include "axi_dac_core.h"
 #include "axi_dmac.h"
 
+#ifdef USE_LIBIIO
+#ifdef UART_INTERFACE
+#include "serial.h"
+#endif // UART_INTERFACE
+#include "tinyiiod.h"
+#include "tinyiiod_user.h"
+#endif // USE_LIBIIO
 /******************************************************************************/
 /************************ Variables Definitions *******************************/
 /******************************************************************************/
@@ -385,6 +392,10 @@ struct ad9361_rf_phy *ad9361_phy;
 struct ad9361_rf_phy *ad9361_phy_b;
 #endif
 
+#ifdef USE_LIBIIO
+extern struct tinyiiod_ops ops;
+#endif
+
 struct spi_init_param spi_param = {.id = SPI_DEVICE_ID, .mode = SPI_MODE_1, .chip_select = CLK_CS, .flags = 0};
 
 /***************************************************************************//**
@@ -393,6 +404,10 @@ struct spi_init_param spi_param = {.id = SPI_DEVICE_ID, .mode = SPI_MODE_1, .chi
 int main(void)
 {
 	int32_t status;
+#ifdef	USE_LIBIIO
+	struct tinyiiod *iiod;
+#endif
+
 #ifdef XILINX_PLATFORM
 	Xil_ICacheEnable();
 	Xil_DCacheEnable();
@@ -557,6 +572,21 @@ int main(void)
 #endif
 #endif
 #endif
+
+#ifdef USE_LIBIIO
+	axi_dmac_init(&ad9361_phy->tx_dmac, default_init_param.tx_dmac_init);
+	axi_dmac_init(&ad9361_phy->rx_dmac, default_init_param.rx_dmac_init);
+	/* Create the tinyiiod */
+	iiod = tinyiiod_create(xml, &ops);
+
+#ifdef UART_INTERFACE
+	serial_init();
+	while(1) {
+		tinyiiod_read_command(iiod);
+	}
+#endif // UART_INTERFACE
+
+#endif // USE_LIBIIO
 
 	printf("Done.\n");
 
