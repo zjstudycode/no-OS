@@ -1,6 +1,6 @@
 /***************************************************************************//**
- *   @file   fifo.c
- *   @brief  Implementation of fifo.
+ *   @file   comm_util.h
+ *   @brief  Implementation of communication util
  *   @author Cristian Pop (cristian.pop@analog.com)
 ********************************************************************************
  * Copyright 2019(c) Analog Devices, Inc.
@@ -36,8 +36,11 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
-#ifndef SRC_DRIVERS_FIFO_FIFO_H_
-#define SRC_DRIVERS_FIFO_FIFO_H_
+#ifndef COMMUNICATION_UTIL
+#define COMMUNICATION_UTIL
+
+#include <stdint.h>
+#include <stdlib.h>
 
 struct fifo {
 	int32_t instance_id;
@@ -46,7 +49,10 @@ struct fifo {
 	uint16_t len;
 };
 
-void insert_tail(struct fifo **p_fifo, char *buff, int32_t len,  int32_t id);
-struct fifo * remove_head(struct fifo *p_fifo);
+void fifo_insert_tail(struct fifo **p_fifo, char *buff, int32_t len,  int32_t id);
+struct fifo * fifo_remove_head(struct fifo *p_fifo);
+void set_keep_alive(void (*kp_alive)(void));
+int32_t comm_read_line(struct fifo **network_fifo, int32_t *instance_id, char *buf, size_t len);
+int32_t comm_read(struct fifo **network_fifo, int32_t *instance_id, char *buf, size_t len);
 
-#endif /* SRC_DRIVERS_FIFO_FIFO_H_ */
+#endif /* COMMUNICATION_UTIL */

@@ -265,12 +265,14 @@ int32_t tinyiiod_do_writebuf(struct tinyiiod *iiod,
 
 	tinyiiod_write_value(iiod, (int) bytes_count);
 	ret = tinyiiod_read(iiod, pbuffer, bytes_count);
+	if(ret < 0)
+		goto err_close;
 	if(bytes_count != ret) {
 		ret = -EPIPE;
 		goto err_close;
 	}
 
-	iiod->ops->write_data(device, pbuffer, bytes_count);
+	ret = iiod->ops->write_data(device, pbuffer, bytes_count);
 	if(ret < 0)
 		goto err_close;
 	tinyiiod_write_value(iiod, (int) bytes_count);

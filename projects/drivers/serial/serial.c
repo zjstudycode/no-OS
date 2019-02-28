@@ -37,18 +37,16 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
-/***************************** Include Files *******************************/
 #include <stdbool.h>
 #include <stdlib.h>
 #include "xuartps.h"
-#include "fifo.h"
+#include "comm_util.h"
 
 #ifdef XPAR_INTC_0_DEVICE_ID
 #include "xintc.h"
 #else
 #include "xscugic.h"
 #endif
-/************************** Constant Definitions **************************/
 
 /*
  * The following constants map to the XPAR parameters created in the
@@ -67,11 +65,17 @@
 #define UART_INT_IRQ_ID		XPAR_XUARTPS_1_INTR
 #endif
 
-/************************** Function Prototypes *****************************/
+#define BUFF_LENGTH 256
+static char buff[BUFF_LENGTH];
+
+static struct fifo *serial_fifo = NULL;
+int32_t TotalErrorCount;
+
+XUartPs UartPs;		/* Instance of the UART Device */
+INTC InterruptController;	/* Instance of the Interrupt Controller */
 
 static int32_t serial_ps_intr(INTC *IntcInstPtr, XUartPs *UartInstPtr,
 		       u16 DeviceId, u16 UartIntrId);
-
 
 static int32_t serial_setup_interrupt_system(INTC *IntcInstancePtr,
 		XUartPs *UartInstancePtr,
@@ -79,65 +83,12 @@ static int32_t serial_setup_interrupt_system(INTC *IntcInstancePtr,
 
 static void serial_handler(void *CallBackRef, u32 Event, uint32_t EventData);
 
-
-/************************** Variable Definitions ***************************/
-
-XUartPs UartPs	;		/* Instance of the UART Device */
-INTC InterruptController;	/* Instance of the Interrupt Controller */
-
-static volatile bool bytes_received_timeout =
-	false; /* is set in XUARTPS_EVENT_RECV_TOUT timeout interrupt, this way we know when a chunk of data ended */
-/*
- * The following counters are used to determine when the entire buffer has
- * been sent and received.
- */
-volatile int32_t TotalReceivedCount;
-volatile int32_t TotalSentCount;
-int32_t TotalErrorCount;
-
-#define BUFF_LENGTH 256
-static char buff[BUFF_LENGTH];
-
-static struct fifo *serial_fifo;
-
 /***************************************************************************//**
  * @brief network_read_line
 *******************************************************************************/
 int32_t serial_read_line(int32_t *instance_id, char *buf, size_t len)
 {
-	int32_t length = 0;
-	char *data = NULL;
-	while(serial_fifo == NULL) {
-	}
-
-	data = serial_fifo->data;
-	char* end = strstr(data, "\r\n");
-	if(end && end == data) { // \r\n on first pos
-		serial_fifo->len -= 2;
-		data += 2;
-		end = strstr(data, "\r\n");
-	}
-	*instance_id = serial_fifo->instance_id;
-	if(end) {
-		length = end - data;
-		memcpy(buf, data, length);
-		buf[length] = '\0';
-		if(length + 2 >= serial_fifo->len) {
-			serial_fifo = remove_head(serial_fifo);
-		} else {
-			serial_fifo->len = serial_fifo->len - length - 2;
-			char * remaining = malloc(serial_fifo->len);
-			memcpy(remaining, (end + 2), serial_fifo->len);
-			free(serial_fifo->data);
-			serial_fifo->data = remaining;
-		}
-	} else {
-		memcpy(buf, serial_fifo->data, serial_fifo->len);
-		buf[length] = '\0';
-		serial_fifo = remove_head(serial_fifo);
-	}
-
-	return length;
+	return comm_read_line(&serial_fifo, instance_id, buf, len);
 }
 
 /***************************************************************************//**
@@ -145,43 +96,17 @@ int32_t serial_read_line(int32_t *instance_id, char *buf, size_t len)
 *******************************************************************************/
 int32_t serial_read(int32_t *instance_id, char *buf, size_t len)
 {
-	int32_t temp_len = 0;
-	while(serial_fifo == NULL) {
-	}
-	if(serial_fifo) {
-		*instance_id = serial_fifo->instance_id;
-		if(serial_fifo->len == len) {
-			memcpy(buf, serial_fifo->data, len);
-			serial_fifo = remove_head(serial_fifo);
-			temp_len =  len;
-		} else if (serial_fifo->len < len) {
-			char *pbuf = buf;
-			do {
-				if(serial_fifo) {
-					memcpy(pbuf, serial_fifo->data, serial_fifo->len);
-					pbuf = pbuf + serial_fifo->len;
-					temp_len += serial_fifo->len;
-					serial_fifo = remove_head(serial_fifo);
-				}
-			} while(temp_len < len);
-		} else {
-			memcpy(buf, serial_fifo->data, len);
-			serial_fifo->len = serial_fifo->len - len; /* new length */
-			char * remaining = malloc(serial_fifo->len);
-			memcpy(remaining, serial_fifo->data + len, serial_fifo->len);
-			free(serial_fifo->data);
-			serial_fifo->data = remaining;
-			temp_len =  len;
-		}
-	}
-
-	return temp_len;
+	return comm_read(&serial_fifo, instance_id, buf, len);
 }
 
-void serial_write_data(int32_t instance_id, const char *buf, size_t len)
+/***************************************************************************//**
+ * @brief serial_write_data
+*******************************************************************************/
+int32_t serial_write_data(int32_t instance_id, const char *buf, size_t len)
 {
 	for ( int32_t i = 0; i < len; i++)
 		outbyte(buf[i]);
+	return 0;
 }
 
 /***************************************************************************//**
@@ -308,15 +233,9 @@ static int32_t serial_ps_intr(INTC *IntcInstPtr, XUartPs *UartInstPtr,
 ***************************************************************************/
 static void serial_handler(void *CallBackRef, u32 Event, uint32_t EventData)
 {
-	/* All of the data has been sent */
-	if (Event == XUARTPS_EVENT_SENT_DATA) {
-		TotalSentCount = EventData;
-	}
-
 	/* All of the data has been received */
 	if (Event == XUARTPS_EVENT_RECV_DATA) {
-		TotalReceivedCount = EventData;
-		insert_tail(&serial_fifo, buff, EventData, 0);
+		fifo_insert_tail(&serial_fifo, buff, EventData, 0);
 		XUartPs_Recv(&UartPs, (u8*)buff, BUFF_LENGTH);
 	}
 
@@ -325,9 +244,7 @@ static void serial_handler(void *CallBackRef, u32 Event, uint32_t EventData)
 	 * timeout just indicates the data stopped for 8 character times
 	 */
 	if (Event == XUARTPS_EVENT_RECV_TOUT) {
-		TotalReceivedCount = EventData;
-		bytes_received_timeout = true;
-		insert_tail(&serial_fifo, buff, EventData, 0);
+		fifo_insert_tail(&serial_fifo, buff, EventData, 0);
 		XUartPs_Recv(&UartPs, (u8*)buff, BUFF_LENGTH);
 	}
 
@@ -336,7 +253,6 @@ static void serial_handler(void *CallBackRef, u32 Event, uint32_t EventData)
 	 * what kind of errors occurred
 	 */
 	if (Event == XUARTPS_EVENT_RECV_ERROR) {
-		TotalReceivedCount = EventData;
 		TotalErrorCount++;
 	}
 
@@ -346,7 +262,6 @@ static void serial_handler(void *CallBackRef, u32 Event, uint32_t EventData)
 	 * MP.
 	 */
 	if (Event == XUARTPS_EVENT_PARE_FRAME_BRKE) {
-		TotalReceivedCount = EventData;
 		TotalErrorCount++;
 	}
 
@@ -355,7 +270,6 @@ static void serial_handler(void *CallBackRef, u32 Event, uint32_t EventData)
 	 * what kind of errors occurred. Specific to Zynq Ultrascale+ MP.
 	 */
 	if (Event == XUARTPS_EVENT_RECV_ORERR) {
-		TotalReceivedCount = EventData;
 		TotalErrorCount++;
 	}
 }

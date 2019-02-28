@@ -48,7 +48,7 @@ int32_t network_read_line(int32_t *instance_id, char *buf, size_t len);
 
 int32_t network_read(int32_t *instance_id, char *buf, size_t len);
 
-void network_write_data(int32_t instance_id, const char *buf, size_t len);
+int32_t network_write_data(int32_t instance_id, const char *buf, size_t len);
 
 int32_t network_close_instance(int32_t instance_id);
 

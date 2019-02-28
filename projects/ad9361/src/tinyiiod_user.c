@@ -2669,7 +2669,6 @@ const struct tinyiiod_ops ops = {
 #ifdef UART_INTERFACE
 	.read = serial_read,
 	.read_line = serial_read_line,
-	.read_wait = serial_read_wait,
 	.write = serial_write_data,
 #endif /* UART_INTERFACE */
 

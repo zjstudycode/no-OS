@@ -44,11 +44,7 @@ int32_t serial_read_line(int32_t *instance_id, char *buf, size_t len);
 
 int32_t serial_read(int32_t *instance_id, char *buf, size_t len);
 
-int32_t serial_read_nonblocking(int32_t *instance_id, char *buf, size_t len);
-
-int32_t serial_read_wait(int32_t *instance_id, size_t len);
-
-void serial_write_data(int32_t instance_id, const char *buf, size_t len);
+int32_t serial_write_data(int32_t instance_id, const char *buf, size_t len);
 
 int32_t serial_init(void);
 
