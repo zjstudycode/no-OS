@@ -1,6 +1,6 @@
 /***************************************************************************//**
- *   @file   serial.h
- *   @brief  Header file of Serial interface.
+ *   @file   network.h
+ *   @brief  Implementation of network interface.
  *   @author Cristian Pop (cristian.pop@analog.com)
 ********************************************************************************
  * Copyright 2019(c) Analog Devices, Inc.
@@ -37,19 +37,19 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
-#ifndef SERIAL_H_
-#define SERIAL_H_
+#ifndef NETWORK_H_
+#define NETWORK_H_
 
-int32_t serial_read_line(int32_t *instance_id, char *buf, size_t len);
+void network_keep_alive(void);
 
-int32_t serial_read(int32_t *instance_id, char *buf, size_t len);
+int32_t network_init(void);
 
-int32_t serial_read_nonblocking(int32_t *instance_id, char *buf, size_t len);
+int32_t network_read_line(int32_t *instance_id, char *buf, size_t len);
 
-int32_t serial_read_wait(int32_t *instance_id, size_t len);
+int32_t network_read(int32_t *instance_id, char *buf, size_t len);
 
-void serial_write_data(int32_t instance_id, const char *buf, size_t len);
+void network_write_data(int32_t instance_id, const char *buf, size_t len);
 
-int32_t serial_init(void);
+int32_t network_close_instance(int32_t instance_id);
 
-#endif /* SERIAL_H_ */
+#endif // NETWORK_H_

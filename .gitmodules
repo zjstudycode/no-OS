@@ -1,4 +1,0 @@
-[submodule "projects/libtinyiiod"]
-	path = projects/libtinyiiod
-	url = https://github.com/analogdevicesinc/libtinyiiod.git
-	ignore = all

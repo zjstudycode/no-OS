@@ -59,7 +59,8 @@
 //#define TDD_SWITCH_STATE_EXAMPLE
 
 #ifdef USE_LIBIIO
-#define UART_INTERFACE
+//#define UART_INTERFACE
+#define TCPIP_INTERFACE
 #endif // USE_LIBIIO
 
 #ifndef USE_LIBIIO

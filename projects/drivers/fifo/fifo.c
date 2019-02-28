@@ -1,6 +1,6 @@
 /***************************************************************************//**
- *   @file   serial.h
- *   @brief  Header file of Serial interface.
+ *   @file   fifo.c
+ *   @brief  Implementation of fifo.
  *   @author Cristian Pop (cristian.pop@analog.com)
 ********************************************************************************
  * Copyright 2019(c) Analog Devices, Inc.
@@ -36,20 +36,73 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include "fifo.h"
 
-#ifndef SERIAL_H_
-#define SERIAL_H_
+/***************************************************************************//**
+ * @brief new_buffer
+*******************************************************************************/
+static struct fifo * new_buffer()
+{
+	struct fifo *buf = malloc(sizeof(struct fifo));
+	buf->len = 0;
+	buf->data = NULL;
+	buf->next = NULL;
 
-int32_t serial_read_line(int32_t *instance_id, char *buf, size_t len);
+	return buf;
+}
 
-int32_t serial_read(int32_t *instance_id, char *buf, size_t len);
+/***************************************************************************//**
+ * @brief get_last
+*******************************************************************************/
+static struct fifo *get_last(struct fifo *p_fifo)
+{
+	if(p_fifo == NULL)
+		return NULL;
+	while (p_fifo->next) {
+		p_fifo = p_fifo->next;
+	}
 
-int32_t serial_read_nonblocking(int32_t *instance_id, char *buf, size_t len);
+	return p_fifo;
+}
 
-int32_t serial_read_wait(int32_t *instance_id, size_t len);
+/***************************************************************************//**
+ * @brief insert_tail
+*******************************************************************************/
+void insert_tail(struct fifo **p_fifo, char *buff, int32_t len,  int32_t id)
+{
+	struct fifo *p = NULL;
+	if(*p_fifo == NULL) {
+		p = new_buffer();
+		*p_fifo = p;
+	} else {
+		p = get_last(*p_fifo);
+		p->next = new_buffer();
+		p = p->next;
+	}
+	p->instance_id = id;
+	p->data = malloc(len);
+	memcpy(p->data, buff, len);
+	p->len = len;
+}
 
-void serial_write_data(int32_t instance_id, const char *buf, size_t len);
+/***************************************************************************//**
+ * @brief remove_head
+*******************************************************************************/
+struct fifo * remove_head(struct fifo *p_fifo)
+{
+	struct fifo *p = p_fifo;
+	if(p_fifo != NULL) {
+		p_fifo = p_fifo->next;
+		free(p->data);
+		p->len = 0;
+		p->next = NULL;
+		p->data = NULL;
+		free(p);
+		p = NULL;
+	}
 
-int32_t serial_init(void);
-
-#endif /* SERIAL_H_ */
+	return p_fifo;
+}

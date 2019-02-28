@@ -1,6 +1,6 @@
 /***************************************************************************//**
- *   @file   serial.h
- *   @brief  Header file of Serial interface.
+ *   @file   fifo.c
+ *   @brief  Implementation of fifo.
  *   @author Cristian Pop (cristian.pop@analog.com)
 ********************************************************************************
  * Copyright 2019(c) Analog Devices, Inc.
@@ -36,20 +36,17 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
+#ifndef SRC_DRIVERS_FIFO_FIFO_H_
+#define SRC_DRIVERS_FIFO_FIFO_H_
 
-#ifndef SERIAL_H_
-#define SERIAL_H_
+struct fifo {
+	int32_t instance_id;
+	struct fifo *next;
+	char *data;
+	uint16_t len;
+};
 
-int32_t serial_read_line(int32_t *instance_id, char *buf, size_t len);
+void insert_tail(struct fifo **p_fifo, char *buff, int32_t len,  int32_t id);
+struct fifo * remove_head(struct fifo *p_fifo);
 
-int32_t serial_read(int32_t *instance_id, char *buf, size_t len);
-
-int32_t serial_read_nonblocking(int32_t *instance_id, char *buf, size_t len);
-
-int32_t serial_read_wait(int32_t *instance_id, size_t len);
-
-void serial_write_data(int32_t instance_id, const char *buf, size_t len);
-
-int32_t serial_init(void);
-
-#endif /* SERIAL_H_ */
+#endif /* SRC_DRIVERS_FIFO_FIFO_H_ */

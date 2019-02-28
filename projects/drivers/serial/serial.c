@@ -1,9 +1,9 @@
 /***************************************************************************//**
  *   @file   serial.c
  *   @brief  Header file of Serial interface.
- *   @author CPop (cristian.pop@analog.com)
+ *   @author Cristian Pop (cristian.pop@analog.com)
 ********************************************************************************
- * Copyright 2013(c) Analog Devices, Inc.
+ * Copyright 2019(c) Analog Devices, Inc.
  *
  * All rights reserved.
  *
@@ -38,18 +38,10 @@
 *******************************************************************************/
 
 /***************************** Include Files *******************************/
-
-#include "xparameters.h"
-#include "xplatform_info.h"
-#include "xuartps.h"
-#include "xil_exception.h"
-#include "xil_printf.h"
 #include <stdbool.h>
-#include <string.h>
-#include <errno.h>
 #include <stdlib.h>
-#include <stdio.h>
-
+#include "xuartps.h"
+#include "fifo.h"
 
 #ifdef XPAR_INTC_0_DEVICE_ID
 #include "xintc.h"
@@ -75,13 +67,9 @@
 #define UART_INT_IRQ_ID		XPAR_XUARTPS_1_INTR
 #endif
 
-
-/**************************** Type Definitions ******************************/
-
-
 /************************** Function Prototypes *****************************/
 
-int32_t serial_ps_intr(INTC *IntcInstPtr, XUartPs *UartInstPtr,
+static int32_t serial_ps_intr(INTC *IntcInstPtr, XUartPs *UartInstPtr,
 		       u16 DeviceId, u16 UartIntrId);
 
 
@@ -89,7 +77,7 @@ static int32_t serial_setup_interrupt_system(INTC *IntcInstancePtr,
 		XUartPs *UartInstancePtr,
 		u16 UartIntrId);
 
-void serial_handler(void *CallBackRef, u32 Event, uint32_t EventData);
+static void serial_handler(void *CallBackRef, u32 Event, uint32_t EventData);
 
 
 /************************** Variable Definitions ***************************/
@@ -107,178 +95,10 @@ volatile int32_t TotalReceivedCount;
 volatile int32_t TotalSentCount;
 int32_t TotalErrorCount;
 
-#define BUFFER_LENGTH 0x2000
-static char buffer[BUFFER_LENGTH];
-static char *pnext = buffer;
-static char *pcurr = buffer;
-
-
 #define BUFF_LENGTH 256
 static char buff[BUFF_LENGTH];
-struct fifo {
-	int32_t instance_id;
-	struct fifo *next;
-	char *data;
-	uint16_t len;
-};
 
 static struct fifo *serial_fifo;
-
-
-
-/***************************************************************************//**
- * @brief new_buffer
-*******************************************************************************/
-struct fifo * new_buffer()
-{
-	struct fifo *buf = malloc(sizeof(struct fifo));
-	buf->len = 0;
-	buf->data = NULL;
-	buf->next = NULL;
-
-	return buf;
-}
-
-/***************************************************************************//**
- * @brief get_last
-*******************************************************************************/
-struct fifo *get_last(struct fifo *p_fifo)
-{
-	if(p_fifo == NULL)
-		return NULL;
-	while (p_fifo->next) {
-		p_fifo = p_fifo->next;
-	}
-
-	return p_fifo;
-}
-
-/***************************************************************************//**
- * @brief insert_tail
-*******************************************************************************/
-void insert_tail(struct fifo **p_fifo, char *buf, int32_t id)
-{
-	struct fifo *p = NULL;
-	if(*p_fifo == NULL) {
-		p = new_buffer();
-		*p_fifo = p;
-	} else {
-		p = get_last(*p_fifo);
-		p->next = new_buffer();
-		p = p->next;
-	}
-	p->data = malloc(id);
-	memcpy(p->data, buf, id);
-	p->len = id;
-}
-
-/***************************************************************************//**
- * @brief remove_head
-*******************************************************************************/
-struct fifo * remove_head(struct fifo *p_fifo)
-{
-	struct fifo *p = p_fifo;
-	if(p_fifo != NULL) {
-		p_fifo = p_fifo->next;
-		free(p->data);
-		p->len = 0;
-		p->next = NULL;
-		p->data = NULL;
-		free(p);
-		p = NULL;
-	}
-
-	return p_fifo;
-}
-
-///***************************************************************************//**
-// * @brief serial_read_line
-//*******************************************************************************/
-//int32_t serial_read_line(int32_t *instance_id, char *buf, size_t len)
-//{
-//	if(pcurr == buffer) { // trigger a new receive
-//		XUartPs_Recv(&UartPs, (u8*)pcurr, BUFFER_LENGTH);
-//		do {
-//		} while(!bytes_received_timeout && BUFFER_LENGTH != TotalReceivedCount);
-//	}
-//	bytes_received_timeout = false;
-//	pnext = strstr(pcurr, "\r\n");
-//	if(pnext) {
-//		*pnext = '\0';
-//		pnext++;
-//		*pnext = '\0';
-//		pnext++;
-//	}
-//	int32_t cmd_length = strlen(pcurr);
-//	memcpy(buf, pcurr, cmd_length);
-//	buf[cmd_length] = '\0';
-//	if(TotalReceivedCount > cmd_length + 2
-//	    && pnext) { // in case two commands have been received, point32_t to the next command
-//		TotalReceivedCount -= (strlen(pcurr) + 2);
-//		pcurr = pnext;
-//	} else {
-//		memset(buffer, 0, BUFFER_LENGTH);
-//		pcurr = buffer;
-//		TotalReceivedCount = 0;
-//	}
-//
-//	return cmd_length;
-//}
-//
-///***************************************************************************//**
-// * @brief serial_read
-//*******************************************************************************/
-//int32_t serial_read(int32_t *instance_id, char *buf, size_t len)
-//{
-//	size_t receive_len = len;
-//	if(TotalReceivedCount) {
-//		if(len == TotalReceivedCount) {
-//			memcpy(buf, pcurr, len);
-//			pcurr = buffer;
-//			TotalReceivedCount = 0;
-//			return len;
-//		} else if(len > TotalReceivedCount) {
-//			memcpy(buf, pcurr, TotalReceivedCount);
-//			pcurr = buffer;
-//			receive_len -= TotalReceivedCount;
-//			TotalReceivedCount = 0;
-//		} else { // len < TotalReceivedCount
-//			memcpy(buf, pcurr, len);
-//			pcurr += len;
-//			TotalReceivedCount -= len;
-//			return len;
-//		}
-//	}
-//	XUartPs_Recv(&UartPs, (u8*)pcurr, receive_len);
-//	do {
-//	} while(!bytes_received_timeout && receive_len != TotalReceivedCount);
-//	bytes_received_timeout = false;
-//
-//	return TotalReceivedCount + receive_len;
-//}
-//
-///***************************************************************************//**
-// * @brief serial_read_nonblocking
-//*******************************************************************************/
-//int32_t serial_read_nonblocking(int32_t *instance_id, char *buf, size_t len)
-//{
-//	XUartPs_Recv(&UartPs, (u8*)buf, len);
-//
-//	return 0;
-//}
-//
-///***************************************************************************//**
-// * @brief serial_read_wait
-//*******************************************************************************/
-//int32_t serial_read_wait(int32_t *instance_id, size_t len)
-//{
-//	do {
-//	} while(!bytes_received_timeout && len != TotalReceivedCount);
-//	bytes_received_timeout = false;
-//
-//	return TotalReceivedCount;
-//}
-
 
 /***************************************************************************//**
  * @brief network_read_line
@@ -344,9 +164,9 @@ int32_t serial_read(int32_t *instance_id, char *buf, size_t len)
 					serial_fifo = remove_head(serial_fifo);
 				}
 			} while(temp_len < len);
-		} else { // (ip_fifo->len > len)
+		} else {
 			memcpy(buf, serial_fifo->data, len);
-			serial_fifo->len = serial_fifo->len - len; // new length
+			serial_fifo->len = serial_fifo->len - len; /* new length */
 			char * remaining = malloc(serial_fifo->len);
 			memcpy(remaining, serial_fifo->data + len, serial_fifo->len);
 			free(serial_fifo->data);
@@ -356,25 +176,6 @@ int32_t serial_read(int32_t *instance_id, char *buf, size_t len)
 	}
 
 	return temp_len;
-}
-
-/***************************************************************************//**
- * @brief network_read_nonblocking
-*******************************************************************************/
-static char *non_block_buf;
-int32_t serial_read_nonblocking(int32_t *instance_id, char *buf, size_t len)
-{
-	non_block_buf = buf;
-
-	return 0;
-}
-
-/***************************************************************************//**
- * @brief network_read_wait
-*******************************************************************************/
-int32_t serial_read_wait(int32_t *instance_id, size_t len)
-{
-	return serial_read(instance_id, non_block_buf, len);
 }
 
 void serial_write_data(int32_t instance_id, const char *buf, size_t len)
@@ -403,7 +204,7 @@ int32_t serial_init(void)
 /***************************************************************************//**
  * @brief serial_ps_intr
 *******************************************************************************/
-int32_t serial_ps_intr(INTC *IntcInstPtr, XUartPs *UartInstPtr,
+static int32_t serial_ps_intr(INTC *IntcInstPtr, XUartPs *UartInstPtr,
 		       u16 DeviceId, u16 UartIntrId)
 {
 	int32_t Status;
@@ -505,7 +306,7 @@ int32_t serial_ps_intr(INTC *IntcInstPtr, XUartPs *UartInstPtr,
 * @note		None.
 *
 ***************************************************************************/
-void serial_handler(void *CallBackRef, u32 Event, uint32_t EventData)
+static void serial_handler(void *CallBackRef, u32 Event, uint32_t EventData)
 {
 	/* All of the data has been sent */
 	if (Event == XUARTPS_EVENT_SENT_DATA) {
@@ -515,7 +316,7 @@ void serial_handler(void *CallBackRef, u32 Event, uint32_t EventData)
 	/* All of the data has been received */
 	if (Event == XUARTPS_EVENT_RECV_DATA) {
 		TotalReceivedCount = EventData;
-		insert_tail(&serial_fifo, buff, EventData);
+		insert_tail(&serial_fifo, buff, EventData, 0);
 		XUartPs_Recv(&UartPs, (u8*)buff, BUFF_LENGTH);
 	}
 
@@ -526,7 +327,7 @@ void serial_handler(void *CallBackRef, u32 Event, uint32_t EventData)
 	if (Event == XUARTPS_EVENT_RECV_TOUT) {
 		TotalReceivedCount = EventData;
 		bytes_received_timeout = true;
-		insert_tail(&serial_fifo, buff, EventData);
+		insert_tail(&serial_fifo, buff, EventData, 0);
 		XUartPs_Recv(&UartPs, (u8*)buff, BUFF_LENGTH);
 	}
 
