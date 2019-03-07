@@ -49,7 +49,7 @@ struct fifo {
 	uint16_t len;
 };
 
-void fifo_insert_tail(struct fifo **p_fifo, char *buff, int32_t len,  int32_t id);
+int32_t fifo_insert_tail(struct fifo **p_fifo, char *buff, int32_t len,  int32_t id);
 struct fifo * fifo_remove_head(struct fifo *p_fifo);
 void set_keep_alive(void (*kp_alive)(void));
 int32_t comm_read_line(struct fifo **network_fifo, int32_t *instance_id, char *buf, size_t len);

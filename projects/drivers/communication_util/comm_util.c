@@ -39,6 +39,7 @@
 #include <comm_util.h>
 #include <string.h>
 #include <xpseudo_asm_gcc.h>
+#include <errno.h>
 
 typedef uint32_t sys_prot_t;
 #define SYS_ARCH_DECL_PROTECT(lev) sys_prot_t lev
@@ -88,6 +89,8 @@ static void (*keep_alive)(void) = NULL;
 static struct fifo * new_buffer()
 {
 	struct fifo *buf = malloc(sizeof(struct fifo));
+	if(!buf)
+		return NULL;
 	buf->len = 0;
 	buf->data = NULL;
 	buf->next = NULL;
@@ -112,24 +115,34 @@ static struct fifo *get_last(struct fifo *p_fifo)
 /***************************************************************************//**
  * @brief fifo_insert_tail
 *******************************************************************************/
-void fifo_insert_tail(struct fifo **p_fifo, char *buff, int32_t len,  int32_t id)
+int32_t fifo_insert_tail(struct fifo **p_fifo, char *buff, int32_t len,  int32_t id)
 {
 	SYS_ARCH_DECL_PROTECT(level);
     SYS_ARCH_PROTECT(level);
+
 	struct fifo *p = NULL;
-	if(*p_fifo == NULL) {
+	if(!(*p_fifo)) {
 		p = new_buffer();
+		if(!p)
+			return -ENOMEM;
 		*p_fifo = p;
 	} else {
 		p = get_last(*p_fifo);
 		p->next = new_buffer();
+		if(!p->next)
+			return -ENOMEM;
 		p = p->next;
 	}
 	p->instance_id = id;
 	p->data = malloc(len);
+	if(!p->data)
+		return -ENOMEM;
 	memcpy(p->data, buff, len);
 	p->len = len;
+
     SYS_ARCH_UNPROTECT(level);
+
+    return 0;
 }
 
 /***************************************************************************//**
@@ -205,37 +218,37 @@ int32_t comm_read_line(struct fifo **fifo, int32_t *instance_id, char *buf, size
 /***************************************************************************//**
  * @brief comm_read
 *******************************************************************************/
-int32_t comm_read(struct fifo **network_fifo, int32_t *instance_id, char *buf, size_t len)
+int32_t comm_read(struct fifo **fifo, int32_t *instance_id, char *buf, size_t len)
 {
 	int32_t temp_len = 0;
-	while(*network_fifo == NULL) {
+	while(*fifo == NULL) {
 		if(keep_alive)
 			keep_alive();
 	}
-	*instance_id = (*network_fifo)->instance_id;
-	if((*network_fifo)->len == len) {
-		memcpy(buf, (*network_fifo)->data, len);
-		(*network_fifo) = fifo_remove_head(*network_fifo);
+	*instance_id = (*fifo)->instance_id;
+	if((*fifo)->len == len) {
+		memcpy(buf, (*fifo)->data, len);
+		(*fifo) = fifo_remove_head(*fifo);
 		temp_len =  len;
-	} else if ((*network_fifo)->len < len) {
+	} else if ((*fifo)->len < len) {
 		char *pbuf = buf;
 		do {
-			if(*network_fifo) {
-				memcpy(pbuf, (*network_fifo)->data, (*network_fifo)->len);
-				pbuf = pbuf + (*network_fifo)->len;
-				temp_len += (*network_fifo)->len;
-				*network_fifo = fifo_remove_head(*network_fifo);
+			if(*fifo) {
+				memcpy(pbuf, (*fifo)->data, (*fifo)->len);
+				pbuf = pbuf + (*fifo)->len;
+				temp_len += (*fifo)->len;
+				*fifo = fifo_remove_head(*fifo);
 			}
 			if(keep_alive && temp_len < len)
 				keep_alive();
 		} while(temp_len < len);
 	} else {
-		memcpy(buf, (*network_fifo)->data, len);
-		(*network_fifo)->len = (*network_fifo)->len - len; /* new length */
-		char * remaining = malloc((*network_fifo)->len);
-		memcpy(remaining, (*network_fifo)->data + len, (*network_fifo)->len);
-		free((*network_fifo)->data);
-		(*network_fifo)->data = remaining;
+		memcpy(buf, (*fifo)->data, len);
+		(*fifo)->len = (*fifo)->len - len; /* new length */
+		char * remaining = malloc((*fifo)->len);
+		memcpy(remaining, (*fifo)->data + len, (*fifo)->len);
+		free((*fifo)->data);
+		(*fifo)->data = remaining;
 		temp_len =  len;
 	}
 
