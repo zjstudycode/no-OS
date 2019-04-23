@@ -286,37 +286,39 @@ err_close:
  * @brief tinyiiod_do_readbuf
 *******************************************************************************/
 int32_t tinyiiod_do_readbuf(struct tinyiiod *iiod,
-			    const char *device, size_t bytes_count)
+			 const char *device, size_t bytes_count)
 {
-	int32_t ret;
-	char *buf = (char*)malloc(bytes_count);
+	int ret;
+	char buf[256];
 	uint32_t mask;
-	char buf_mask[10];
-
-	if(!buf) {
-		ret = -ENOMEM;
-		tinyiiod_write_value(iiod, ret);
-		goto err_close;
-	}
+	bool print_mask = true;
+	size_t offset = 0;
 
 	ret = iiod->ops->get_mask(device, &mask);
 	if (ret < 0) {
 		tinyiiod_write_value(iiod, ret);
-		goto err_close;
+		return ret;
 	}
+	ret = (int) iiod->ops->capture(device, bytes_count);
+	while(bytes_count) {
+		size_t bytes = bytes_count > sizeof(buf) ? sizeof(buf) : bytes_count;
 
-	ret = (int) iiod->ops->read_data(device, buf, bytes_count);
-	if (ret < 0) {
+		ret = (int) iiod->ops->read_data(device, buf, offset, bytes);
+		offset += bytes;
 		tinyiiod_write_value(iiod, ret);
-		goto err_close;
+		if (ret < 0)
+			return ret;
+
+		if (print_mask) {
+			char buf_mask[10];
+
+			snprintf(buf_mask, sizeof(buf_mask), "%08"PRIx32"\n", mask);
+			tinyiiod_write_string(iiod, buf_mask);
+			print_mask = false;
+		}
+
+		tinyiiod_write(iiod, buf, (size_t) ret);
+		bytes_count -= (size_t) ret;
 	}
-
-	tinyiiod_write_value(iiod, ret);
-	snprintf(buf_mask, sizeof(buf_mask), "%08"PRIx32"\n", mask);
-	tinyiiod_write_string(iiod, buf_mask);
-	tinyiiod_write(iiod, buf, (size_t) ret);
-
-err_close:
-	free(buf);
 	return ret;
 }

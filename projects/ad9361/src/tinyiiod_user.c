@@ -2645,21 +2645,33 @@ static ssize_t write_dev(const char *device, const char *buf,
 }
 
 /**
- * read data from DAC
+ * capture data from DAC into RAM
  * @param *device name
- * @param **buff where data's are stored
  * @param bytes_count
  * @return bytes_count
  */
-static ssize_t read_dev(const char *device, char *pbuf, size_t bytes_count)
-{
+static ssize_t capture(const char *device, size_t bytes_count) {
 	if (!dev_is_ad9361_module(device))
-		return -ENODEV;
+			return -ENODEV;
 	ad9361_phy->rx_dmac->flags = 0;
 	axi_dmac_transfer(ad9361_phy->rx_dmac,
 			  ADC_DDR_BASEADDR, bytes_count);
 	Xil_DCacheInvalidateRange(ADC_DDR_BASEADDR,	bytes_count);
-	memcpy(pbuf, (char *)ADC_DDR_BASEADDR, bytes_count);
+
+	return bytes_count;
+}
+
+/**
+ * read data from RAM to pbuf, use "capture()" first
+ * @param *device name
+ * @param *buff where data's are stored
+ * @param *offset to the remaining data
+ * @param bytes_count
+ * @return bytes_count
+ */
+static ssize_t read_dev(const char *device, char *pbuf, size_t offset, size_t bytes_count)
+{
+	memcpy(pbuf, (char *)ADC_DDR_BASEADDR + offset, bytes_count);
 
 	return bytes_count;
 }
@@ -2683,6 +2695,7 @@ const struct tinyiiod_ops ops = {
 	.write_attr = write_attr,
 	.ch_read_attr = ch_read_attr,
 	.ch_write_attr = ch_write_attr,
+	.capture = capture,
 	.read_data = read_dev,
 	.write_data = write_dev,
 
