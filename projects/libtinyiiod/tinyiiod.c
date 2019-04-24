@@ -257,28 +257,27 @@ int32_t tinyiiod_do_writebuf(struct tinyiiod *iiod,
 			     const char *device, size_t bytes_count)
 {
 	int32_t ret;
-	char *pbuffer = (char*)malloc(bytes_count);
-	if(!pbuffer) {
-		ret = -ENOMEM;
-		goto err_close;
+	size_t total_bytes = bytes_count;
+	char buf[256];
+	size_t offset = 0;
+
+	tinyiiod_write_value(iiod, bytes_count);
+	while(bytes_count) {
+		size_t bytes = bytes_count > sizeof(buf) ? sizeof(buf) : bytes_count;
+		ret = tinyiiod_read(iiod, buf, bytes);
+		if(ret > 0) {
+			ret = iiod->ops->write_data(device, buf, offset, ret);
+			offset += ret;
+			if (ret < 0)
+				return ret;
+			bytes_count -= ret;
+		}
+		else
+			return ret;
 	}
+	ret = iiod->ops->store_data(device, total_bytes);
+	tinyiiod_write_value(iiod, (int) total_bytes);
 
-	tinyiiod_write_value(iiod, (int) bytes_count);
-	ret = tinyiiod_read(iiod, pbuffer, bytes_count);
-	if(ret < 0)
-		goto err_close;
-	if(bytes_count != ret) {
-		ret = -EPIPE;
-		goto err_close;
-	}
-
-	ret = iiod->ops->write_data(device, pbuffer, bytes_count);
-	if(ret < 0)
-		goto err_close;
-	tinyiiod_write_value(iiod, (int) bytes_count);
-
-err_close:
-	free(pbuffer);
 	return ret;
 }
 
@@ -288,7 +287,7 @@ err_close:
 int32_t tinyiiod_do_readbuf(struct tinyiiod *iiod,
 			 const char *device, size_t bytes_count)
 {
-	int ret;
+	int32_t ret;
 	char buf[256];
 	uint32_t mask;
 	bool print_mask = true;
@@ -296,10 +295,9 @@ int32_t tinyiiod_do_readbuf(struct tinyiiod *iiod,
 
 	ret = iiod->ops->get_mask(device, &mask);
 	if (ret < 0) {
-		tinyiiod_write_value(iiod, ret);
 		return ret;
 	}
-	ret = (int) iiod->ops->capture(device, bytes_count);
+	ret = iiod->ops->capture_data(device, bytes_count);
 	while(bytes_count) {
 		size_t bytes = bytes_count > sizeof(buf) ? sizeof(buf) : bytes_count;
 
@@ -320,5 +318,6 @@ int32_t tinyiiod_do_readbuf(struct tinyiiod *iiod,
 		tinyiiod_write(iiod, buf, (size_t) ret);
 		bytes_count -= (size_t) ret;
 	}
+
 	return ret;
 }

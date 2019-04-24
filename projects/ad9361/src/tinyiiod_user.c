@@ -2626,20 +2626,40 @@ static int32_t get_mask(const char *device, uint32_t *mask)
 }
 
 /**
- * write data to DAC
+ * write data to DAC, reverse of capture()
  * @param *device name
  * @param *buff
  * @param bytes_count
  * @return bytes_count
  */
-static ssize_t write_dev(const char *device, const char *buf,
-			 size_t bytes_count)
+static ssize_t store_data(const char *device, size_t bytes_count)
 {
 	ad9361_phy->tx_dmac->flags = DMA_CYCLIC;
-	axi_dac_set_buff(ad9361_phy->tx_dac, DAC_DDR_BASEADDR, (uint16_t *)buf,
+	ssize_t ret = axi_dmac_transfer(ad9361_phy->tx_dmac, DAC_DDR_BASEADDR, bytes_count);
+	if(ret < 0)
+		return ret;
+	ret = axi_dac_set_datasel(ad9361_phy->tx_dac, -1, AXI_DAC_DATA_SEL_DMA);
+	if(ret < 0)
+		return ret;
+
+	return bytes_count;
+}
+
+/**
+ * write data to RAM
+ * @param *device name
+ * @param *buff
+ * @param *offset in memory, used if some data have been already written
+ * @param bytes_count
+ * @return bytes_count
+ */
+static ssize_t write_dev(const char *device, const char *buf,
+		size_t offset,  size_t bytes_count)
+{
+	ssize_t ret = axi_dac_set_buff(ad9361_phy->tx_dac, DAC_DDR_BASEADDR + offset, (uint16_t *)buf,
 			 bytes_count);
-	axi_dmac_transfer(ad9361_phy->tx_dmac, DAC_DDR_BASEADDR, bytes_count);
-	axi_dac_set_datasel(ad9361_phy->tx_dac, -1, AXI_DAC_DATA_SEL_DMA);
+	if(ret < 0)
+		return ret;
 
 	return bytes_count;
 }
@@ -2650,7 +2670,7 @@ static ssize_t write_dev(const char *device, const char *buf,
  * @param bytes_count
  * @return bytes_count
  */
-static ssize_t capture(const char *device, size_t bytes_count) {
+static ssize_t capture_data(const char *device, size_t bytes_count) {
 	if (!dev_is_ad9361_module(device))
 			return -ENODEV;
 	ad9361_phy->rx_dmac->flags = 0;
@@ -2695,8 +2715,9 @@ const struct tinyiiod_ops ops = {
 	.write_attr = write_attr,
 	.ch_read_attr = ch_read_attr,
 	.ch_write_attr = ch_write_attr,
-	.capture = capture,
+	.capture_data = capture_data,
 	.read_data = read_dev,
+	.store_data = store_data,
 	.write_data = write_dev,
 
 	.open = open_dev,
