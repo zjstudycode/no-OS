@@ -522,12 +522,12 @@ int main(void)
 #endif
 	status = axi_dmac_init(&ad9361_phy->tx_dmac, default_init_param.tx_dmac_init);
 	if (status < 0) {
-		printf("ad9361 init error: %ld\n", status);
+		printf("ad9361 init error: %"PRIi32"\n", status);
 		return status;
 	}
 	status = axi_dmac_init(&ad9361_phy->rx_dmac, default_init_param.rx_dmac_init);
 	if (status < 0) {
-		printf("ad9361 init error: %ld\n", status);
+		printf("ad9361 init error: %"PRIi32"\n", status);
 		return status;
 	}
 #ifndef AXI_ADC_NOT_PRESENT
