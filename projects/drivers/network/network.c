@@ -86,7 +86,7 @@ void network_keep_alive(void)
 /***************************************************************************//**
  * @brief network_init
 *******************************************************************************/
-int32_t network_init(void)
+ssize_t network_init(void)
 {
 	set_keep_alive(lwip_keep_alive);
 	return init_lwip();
@@ -288,7 +288,7 @@ void network_close(struct tcp_pcb *tpcb, struct network_instance *es)
 /***************************************************************************//**
  * @brief network_read_line
 *******************************************************************************/
-int32_t network_read_line(int32_t *instance_id, char *buf, size_t len)
+ssize_t network_read_line(int32_t *instance_id, char *buf, size_t len)
 {
 	return comm_read_line(&network_fifo, instance_id, buf, len);
 }
@@ -296,7 +296,7 @@ int32_t network_read_line(int32_t *instance_id, char *buf, size_t len)
 /***************************************************************************//**
  * @brief network_read
 *******************************************************************************/
-int32_t network_read(int32_t *instance_id, char *buf, size_t len)
+ssize_t network_read(int32_t *instance_id, char *buf, size_t len)
 {
 	return comm_read(&network_fifo, instance_id, buf, len);
 }
@@ -304,7 +304,7 @@ int32_t network_read(int32_t *instance_id, char *buf, size_t len)
 /***************************************************************************//**
  * @brief network_write_data
 *******************************************************************************/
-int32_t network_write_data(int32_t instance_id, const char *buf, size_t len)
+ssize_t network_write_data(int32_t instance_id, const char *buf, size_t len)
 {
 	struct network_instance *instance = NULL;
 	u8_t apiflags = TCP_WRITE_FLAG_COPY;
@@ -340,7 +340,7 @@ int32_t network_write_data(int32_t instance_id, const char *buf, size_t len)
 /***************************************************************************//**
  * @brief network_exit
 *******************************************************************************/
-int32_t network_close_instance(int32_t instance_id)
+ssize_t network_close_instance(int32_t instance_id)
 {
 	struct network_instance *instance;
 	err_t err = 0;

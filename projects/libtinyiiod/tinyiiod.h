@@ -25,12 +25,12 @@ struct tinyiiod;
 struct tinyiiod_ops {
 
 	/* Read from the input stream */
-	int32_t (*read)(int32_t *instance_id, char *buf, size_t len);
-	int32_t (*read_line)(int32_t *instance_id, char *buf, size_t len);
+	ssize_t (*read)(int32_t *instance_id, char *buf, size_t len);
+	ssize_t (*read_line)(int32_t *instance_id, char *buf, size_t len);
 
 	/* Write to the output stream */
-	int32_t (*write)(int32_t instance_id, const char *buf, size_t len);
-	int32_t (*close_instance)(int32_t instance_id);
+	ssize_t (*write)(int32_t instance_id, const char *buf, size_t len);
+	ssize_t (*close_instance)(int32_t instance_id);
 
 	ssize_t (*read_attr)(const char *device, const char *attr,
 			     char *buf, size_t len, bool debug);

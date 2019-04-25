@@ -40,12 +40,12 @@
 #ifndef SERIAL_H_
 #define SERIAL_H_
 
-int32_t serial_read_line(int32_t *instance_id, char *buf, size_t len);
+ssize_t serial_read_line(int32_t *instance_id, char *buf, size_t len);
 
-int32_t serial_read(int32_t *instance_id, char *buf, size_t len);
+ssize_t serial_read(int32_t *instance_id, char *buf, size_t len);
 
-int32_t serial_write_data(int32_t instance_id, const char *buf, size_t len);
+ssize_t serial_write_data(int32_t instance_id, const char *buf, size_t len);
 
-int32_t serial_init(void);
+ssize_t serial_init(void);
 
 #endif /* SERIAL_H_ */

@@ -19,7 +19,18 @@
 #define COMPAT_H
 
 
-#ifdef _COMPAT_STDINT_TYPES
+
+
+#ifdef _USE_STD_INT_TYPES
+#include <stdint.h>
+#include <inttypes.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <inttypes.h>
+#include <errno.h>
+#include <string.h>
+#else // _USE_STD_INT_TYPES
 #if !defined(__ssize_t_defined) && !defined(_SSIZE_T_DEFINED)
 typedef long int ssize_t;
 typedef unsigned long int size_t;
@@ -41,16 +52,6 @@ typedef int bool;
 
 # define PRIx32		"x"
 # define PRIu16		"u"
-
-#else // _USE_STD_INT_TYPES
-#include <stdint.h>
-#include <inttypes.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <inttypes.h>
-#include <errno.h>
-#include <string.h>
-#endif // _USE_STD_INT_TYPES
+#endif //_USE_STD_INT_TYPES
 
 #endif /* COMPAT_H */

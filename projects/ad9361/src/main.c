@@ -582,14 +582,18 @@ int main(void)
 	iiod = tinyiiod_create(xml, &ops);
 
 #ifdef UART_INTERFACE
-	serial_init();
+	int32_t ret = serial_init();
+	if(ret < 0)
+		return ret;
 	while(1) {
 		tinyiiod_read_command(iiod);
 	}
 #endif // UART_INTERFACE
 
 #ifdef TCPIP_INTERFACE
-	network_init();
+	int32_t ret = network_init();
+	if(ret < 0)
+		printf("network_init() error: %"PRIi32"\n", ret);
 	while(1) {
 		network_keep_alive();
 		tinyiiod_read_command(iiod);

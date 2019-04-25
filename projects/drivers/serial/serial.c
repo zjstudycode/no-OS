@@ -36,7 +36,7 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
-
+#include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include "xuartps.h"
@@ -74,10 +74,10 @@ int32_t TotalErrorCount;
 XUartPs UartPs;		/* Instance of the UART Device */
 INTC InterruptController;	/* Instance of the Interrupt Controller */
 
-static int32_t serial_ps_intr(INTC *IntcInstPtr, XUartPs *UartInstPtr,
+static ssize_t serial_ps_intr(INTC *IntcInstPtr, XUartPs *UartInstPtr,
 		       u16 DeviceId, u16 UartIntrId);
 
-static int32_t serial_setup_interrupt_system(INTC *IntcInstancePtr,
+static ssize_t serial_setup_interrupt_system(INTC *IntcInstancePtr,
 		XUartPs *UartInstancePtr,
 		u16 UartIntrId);
 
@@ -86,7 +86,7 @@ static void serial_handler(void *CallBackRef, u32 Event, uint32_t EventData);
 /***************************************************************************//**
  * @brief network_read_line
 *******************************************************************************/
-int32_t serial_read_line(int32_t *instance_id, char *buf, size_t len)
+ssize_t serial_read_line(int32_t *instance_id, char *buf, size_t len)
 {
 	return comm_read_line(&serial_fifo, instance_id, buf, len);
 }
@@ -94,7 +94,7 @@ int32_t serial_read_line(int32_t *instance_id, char *buf, size_t len)
 /***************************************************************************//**
  * @brief network_read
 *******************************************************************************/
-int32_t serial_read(int32_t *instance_id, char *buf, size_t len)
+ssize_t serial_read(int32_t *instance_id, char *buf, size_t len)
 {
 	return comm_read(&serial_fifo, instance_id, buf, len);
 }
@@ -102,7 +102,7 @@ int32_t serial_read(int32_t *instance_id, char *buf, size_t len)
 /***************************************************************************//**
  * @brief serial_write_data
 *******************************************************************************/
-int32_t serial_write_data(int32_t instance_id, const char *buf, size_t len)
+ssize_t serial_write_data(int32_t instance_id, const char *buf, size_t len)
 {
 	for ( int32_t i = 0; i < len; i++)
 		outbyte(buf[i]);
@@ -112,7 +112,7 @@ int32_t serial_write_data(int32_t instance_id, const char *buf, size_t len)
 /***************************************************************************//**
  * @brief serial_init
 *******************************************************************************/
-int32_t serial_init(void)
+ssize_t serial_init(void)
 {
 	int32_t Status;
 
@@ -129,7 +129,7 @@ int32_t serial_init(void)
 /***************************************************************************//**
  * @brief serial_ps_intr
 *******************************************************************************/
-static int32_t serial_ps_intr(INTC *IntcInstPtr, XUartPs *UartInstPtr,
+static ssize_t serial_ps_intr(INTC *IntcInstPtr, XUartPs *UartInstPtr,
 		       u16 DeviceId, u16 UartIntrId)
 {
 	int32_t Status;
@@ -294,7 +294,7 @@ static void serial_handler(void *CallBackRef, u32 Event, uint32_t EventData)
 * @note		None.
 *
 ****************************************************************************/
-static int32_t serial_setup_interrupt_system(INTC *IntcInstancePtr,
+static ssize_t serial_setup_interrupt_system(INTC *IntcInstancePtr,
 		XUartPs *UartInstancePtr,
 		u16 UartIntrId)
 {
