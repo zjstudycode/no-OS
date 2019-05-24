@@ -89,6 +89,7 @@ static void (*keep_alive)(void) = NULL;
 static struct fifo * new_buffer()
 {
 	struct fifo *buf = malloc(sizeof(struct fifo));
+
 	if(!buf)
 		return NULL;
 	buf->len = 0;
@@ -150,9 +151,11 @@ int32_t fifo_insert_tail(struct fifo **p_fifo, char *buff, int32_t len,  int32_t
 *******************************************************************************/
 struct fifo * fifo_remove_head(struct fifo *p_fifo)
 {
-	SYS_ARCH_DECL_PROTECT(level);
-    SYS_ARCH_PROTECT(level);
 	struct fifo *p = p_fifo;
+
+	SYS_ARCH_DECL_PROTECT(level);
+	SYS_ARCH_PROTECT(level);
+
 	if(p_fifo != NULL) {
 		p_fifo = p_fifo->next;
 		free(p->data);
@@ -163,6 +166,7 @@ struct fifo * fifo_remove_head(struct fifo *p_fifo)
 		p = NULL;
 	}
 	SYS_ARCH_UNPROTECT(level);
+
 	return p_fifo;
 }
 
@@ -180,6 +184,7 @@ int32_t comm_read_line(struct fifo **fifo, int32_t *instance_id, char *buf, size
 {
 	int32_t length = 0;
 	char *data = NULL;
+
 	while(*fifo == NULL) {
 		if(keep_alive)
 			keep_alive();
@@ -192,7 +197,8 @@ int32_t comm_read_line(struct fifo **fifo, int32_t *instance_id, char *buf, size
 		data += 2;
 		end = strstr(data, "\r\n");
 	}
-	*instance_id = (*fifo)->instance_id;
+	if(instance_id)
+		*instance_id = (*fifo)->instance_id;
 	if(end) {
 		length = end - data;
 		memcpy(buf, data, length);
@@ -221,11 +227,13 @@ int32_t comm_read_line(struct fifo **fifo, int32_t *instance_id, char *buf, size
 int32_t comm_read(struct fifo **fifo, int32_t *instance_id, char *buf, size_t len)
 {
 	int32_t temp_len = 0;
+
 	while(*fifo == NULL) {
 		if(keep_alive)
 			keep_alive();
 	}
-	*instance_id = (*fifo)->instance_id;
+	if(instance_id)
+		*instance_id = (*fifo)->instance_id;
 	if((*fifo)->len == len) {
 		memcpy(buf, (*fifo)->data, len);
 		(*fifo) = fifo_remove_head(*fifo);

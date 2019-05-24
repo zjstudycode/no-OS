@@ -26,8 +26,8 @@ ssize_t tinyiiod_read_line(struct tinyiiod *iiod, char *buf, size_t len);
 
 ssize_t tinyiiod_write_char(struct tinyiiod *iiod, char c);
 ssize_t tinyiiod_write(struct tinyiiod *iiod, const char *data, size_t len);
-void tinyiiod_write_string(struct tinyiiod *iiod, const char *str);
-void tinyiiod_write_value(struct tinyiiod *iiod, int32_t value);
+ssize_t tinyiiod_write_string(struct tinyiiod *iiod, const char *str);
+ssize_t tinyiiod_write_value(struct tinyiiod *iiod, int32_t value);
 
 void tinyiiod_write_xml(struct tinyiiod *iiod);
 
@@ -42,6 +42,8 @@ void tinyiiod_do_open(struct tinyiiod *iiod, const char *device,
 		      size_t sample_size, uint32_t mask);
 void tinyiiod_do_close(struct tinyiiod *iiod, const char *device);
 
+int32_t tinyiiod_do_open_instance(struct tinyiiod *iiod);
+
 int32_t tinyiiod_do_close_instance(struct tinyiiod *iiod);
 
 int32_t tinyiiod_do_readbuf(struct tinyiiod *iiod,
@@ -51,5 +53,7 @@ int32_t tinyiiod_do_writebuf(struct tinyiiod *iiod, const char *device,
 			     size_t bytes_count);
 
 int32_t tinyiiod_parse_string(struct tinyiiod *iiod, char *str);
+
+int32_t tinyiiod_set_timeout(struct tinyiiod *iiod, uint32_t timeout);
 
 #endif /* TINYIIOD_PRIVATE_H */

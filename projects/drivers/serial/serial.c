@@ -86,23 +86,23 @@ static void serial_handler(void *CallBackRef, u32 Event, uint32_t EventData);
 /***************************************************************************//**
  * @brief network_read_line
 *******************************************************************************/
-ssize_t serial_read_line(int32_t *instance_id, char *buf, size_t len)
+ssize_t serial_read_line(char *buf, size_t len)
 {
-	return comm_read_line(&serial_fifo, instance_id, buf, len);
+	return comm_read_line(&serial_fifo, NULL, buf, len);
 }
 
 /***************************************************************************//**
  * @brief network_read
 *******************************************************************************/
-ssize_t serial_read(int32_t *instance_id, char *buf, size_t len)
+ssize_t serial_read(char *buf, size_t len)
 {
-	return comm_read(&serial_fifo, instance_id, buf, len);
+	return comm_read(&serial_fifo, NULL, buf, len);
 }
 
 /***************************************************************************//**
  * @brief serial_write_data
 *******************************************************************************/
-ssize_t serial_write_data(int32_t instance_id, const char *buf, size_t len)
+ssize_t serial_write_data(const char *buf, size_t len)
 {
 	for ( int32_t i = 0; i < len; i++)
 		outbyte(buf[i]);
@@ -123,6 +123,7 @@ ssize_t serial_init(void)
 		return XST_FAILURE;
 	}
 	XUartPs_Recv(&UartPs, (u8*)buff, BUFF_LENGTH);
+
 	return XST_SUCCESS;
 }
 
@@ -132,8 +133,8 @@ ssize_t serial_init(void)
 static ssize_t serial_ps_intr(INTC *IntcInstPtr, XUartPs *UartInstPtr,
 		       u16 DeviceId, u16 UartIntrId)
 {
-	int32_t Status;
 	XUartPs_Config *Config;
+	int32_t Status;
 	u32 IntrMask;
 
 	if (XGetPlatform_Info() == XPLAT_ZYNQ_ULTRA_MP) {

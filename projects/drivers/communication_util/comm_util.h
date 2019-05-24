@@ -43,7 +43,7 @@
 #include <stdlib.h>
 
 struct fifo {
-	int32_t instance_id;
+	int32_t instance_id; /*current client instance*/
 	struct fifo *next;
 	char *data;
 	uint16_t len;

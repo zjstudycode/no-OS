@@ -44,12 +44,12 @@ void network_keep_alive(void);
 
 ssize_t network_init(void);
 
-ssize_t network_read_line(int32_t *instance_id, char *buf, size_t len);
+ssize_t network_read_line(char *buf, size_t len);
 
-ssize_t network_read(int32_t *instance_id, char *buf, size_t len);
+ssize_t network_read(char *buf, size_t len);
 
-ssize_t network_write_data(int32_t instance_id, const char *buf, size_t len);
+ssize_t network_write_data(const char *buf, size_t len);
 
-ssize_t network_close_instance(int32_t instance_id);
+ssize_t network_close_instance();
 
 #endif // NETWORK_H_

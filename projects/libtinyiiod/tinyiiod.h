@@ -23,14 +23,16 @@
 struct tinyiiod;
 
 struct tinyiiod_ops {
-
 	/* Read from the input stream */
-	ssize_t (*read)(int32_t *instance_id, char *buf, size_t len);
-	ssize_t (*read_line)(int32_t *instance_id, char *buf, size_t len);
+	ssize_t (*read)(char *buf, size_t len);
 
 	/* Write to the output stream */
-	ssize_t (*write)(int32_t instance_id, const char *buf, size_t len);
-	ssize_t (*close_instance)(int32_t instance_id);
+	ssize_t (*write)(const char *buf, size_t len);
+	ssize_t (*read_line)(char *buf, size_t len);
+
+	ssize_t (*open_instance)();
+
+	ssize_t (*close_instance)();
 
 	ssize_t (*read_attr)(const char *device, const char *attr,
 			     char *buf, size_t len, bool debug);
@@ -46,14 +48,17 @@ struct tinyiiod_ops {
 	int32_t (*open)(const char *device, size_t sample_size, uint32_t mask);
 	int32_t (*close)(const char *device);
 
-	ssize_t (*capture_data)(const char *device, size_t bytes_count);
-	ssize_t (*read_data)(const char *device, char *buf, size_t offset, size_t bytes_count);
+	ssize_t (*transfer_dev_to_mem)(const char *device, size_t bytes_count);
+	ssize_t (*read_data)(const char *device, char *buf, size_t offset,
+			     size_t bytes_count);
 
-	ssize_t (*store_data)(const char *device, size_t bytes_count);
+	ssize_t (*transfer_mem_to_dev)(const char *device, size_t bytes_count);
 	ssize_t (*write_data)(const char *device, const char *buf, size_t offset,
 			      size_t bytes_count);
 
 	int32_t (*get_mask)(const char *device, uint32_t *mask);
+
+	int32_t (*set_timeout)(uint32_t timeout);
 };
 
 struct tinyiiod * tinyiiod_create(const char *xml,
@@ -62,4 +67,3 @@ void tinyiiod_destroy(struct tinyiiod *iiod);
 int32_t tinyiiod_read_command(struct tinyiiod *iiod);
 
 #endif /* TINYIIOD_H */
-

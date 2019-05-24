@@ -2626,13 +2626,13 @@ static int32_t get_mask(const char *device, uint32_t *mask)
 }
 
 /**
- * write data to DAC, reverse of capture()
+ * transfer_mem_to_dev write data to DAC
  * @param *device name
  * @param *buff
  * @param bytes_count
  * @return bytes_count
  */
-static ssize_t store_data(const char *device, size_t bytes_count)
+static ssize_t transfer_mem_to_dev(const char *device, size_t bytes_count)
 {
 	ad9361_phy->tx_dmac->flags = DMA_CYCLIC;
 	ssize_t ret = axi_dmac_transfer(ad9361_phy->tx_dmac, DAC_DDR_BASEADDR, bytes_count);
@@ -2665,12 +2665,12 @@ static ssize_t write_dev(const char *device, const char *buf,
 }
 
 /**
- * capture data from DAC into RAM
+ * transfer_dev_to_mem data from DAC into RAM
  * @param *device name
  * @param bytes_count
  * @return bytes_count
  */
-static ssize_t capture_data(const char *device, size_t bytes_count) {
+static ssize_t transfer_dev_to_mem(const char *device, size_t bytes_count) {
 	if (!dev_is_ad9361_module(device))
 			return -ENODEV;
 	ad9361_phy->rx_dmac->flags = 0;
@@ -2715,9 +2715,9 @@ const struct tinyiiod_ops ops = {
 	.write_attr = write_attr,
 	.ch_read_attr = ch_read_attr,
 	.ch_write_attr = ch_write_attr,
-	.capture_data = capture_data,
+	.transfer_dev_to_mem = transfer_dev_to_mem,
 	.read_data = read_dev,
-	.store_data = store_data,
+	.transfer_mem_to_dev = transfer_mem_to_dev,
 	.write_data = write_dev,
 
 	.open = open_dev,

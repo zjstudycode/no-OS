@@ -19,9 +19,10 @@
 
 #include "compat.h"
 
-/***************************************************************************//**
- * @brief parse_rw_string
-*******************************************************************************/
+#define TINYIIOD_VERSION_MAJOR 1
+#define TINYIIOD_VERSION_MINOR 2
+#define TINYIIOD_VERSION_GIT "v0.1"
+
 static int32_t parse_rw_string(struct tinyiiod *iiod, char *str, bool write)
 {
 	char *device, *channel, *attr, *ptr;
@@ -85,9 +86,6 @@ static int32_t parse_rw_string(struct tinyiiod *iiod, char *str, bool write)
 	return 0;
 }
 
-/***************************************************************************//**
- * @brief parse_open_string
-*******************************************************************************/
 static int32_t parse_open_string(struct tinyiiod *iiod, char *str)
 {
 	char *device, *ptr;
@@ -115,9 +113,13 @@ static int32_t parse_open_string(struct tinyiiod *iiod, char *str)
 	return 0;
 }
 
-/***************************************************************************//**
- * @brief parse_writebuf_string
-*******************************************************************************/
+static int32_t parse_timeout_string(struct tinyiiod *iiod, char *str)
+{
+	uint32_t timeout = strtoul(str, NULL, 10);
+
+	return tinyiiod_set_timeout(iiod, timeout);
+}
+
 static int32_t parse_writebuf_string(struct tinyiiod *iiod, char *str)
 {
 	char *device, *ptr;
@@ -138,9 +140,6 @@ static int32_t parse_writebuf_string(struct tinyiiod *iiod, char *str)
 	return tinyiiod_do_writebuf(iiod, device, (size_t) bytes_count);
 }
 
-/***************************************************************************//**
- * @brief parse_readbuf_string
-*******************************************************************************/
 static int32_t parse_readbuf_string(struct tinyiiod *iiod, char *str)
 {
 	char *device, *ptr;
@@ -161,9 +160,6 @@ static int32_t parse_readbuf_string(struct tinyiiod *iiod, char *str)
 	return tinyiiod_do_readbuf(iiod, device, (size_t) bytes_count);
 }
 
-/***************************************************************************//**
- * @brief tinyiiod_parse_string
-*******************************************************************************/
 int32_t tinyiiod_parse_string(struct tinyiiod *iiod, char *str)
 {
 	while (*str == '\n' || *str == '\r')
@@ -181,31 +177,41 @@ int32_t tinyiiod_parse_string(struct tinyiiod *iiod, char *str)
 			 TINYIIOD_VERSION_GIT);
 		tinyiiod_write_string(iiod, buf);
 		return 0;
-	} else if (!strncmp(str, "PRINT", sizeof("PRINT"))) {
+	}
+
+	if (!strncmp(str, "PRINT", sizeof("PRINT"))) {
 		tinyiiod_write_xml(iiod);
 		return 0;
-	} else if (!strncmp(str, "READ ", sizeof("READ ") - 1)) {
+	}
+
+	if (!strncmp(str, "READ ", sizeof("READ ") - 1))
 		return parse_rw_string(iiod, str + sizeof("READ ") - 1, false);
-	} else if (!strncmp(str, "WRITE ", sizeof("WRITE ") -1)) {
+
+	if (!strncmp(str, "WRITE ", sizeof("WRITE ") -1))
 		return parse_rw_string(iiod, str + sizeof("WRITE ") - 1, true);
-	} else if (!strncmp(str, "OPEN ", sizeof("OPEN ") -1)) {
+
+	if (!strncmp(str, "OPEN ", sizeof("OPEN ") -1))
 		return parse_open_string(iiod, str + sizeof("OPEN ") - 1);
-	} else if (!strncmp(str, "CLOSE ", sizeof("CLOSE ") -1)) {
+
+	if (!strncmp(str, "CLOSE ", sizeof("CLOSE ") -1)) {
 		tinyiiod_do_close(iiod, str + sizeof("CLOSE ") - 1);
 		return 0;
-	} else if (!strncmp(str, "READBUF ", sizeof("READBUF ") -1)) {
-		return parse_readbuf_string(iiod, str + sizeof("READBUF ") - 1);
-	} else if (!strncmp(str, "WRITEBUF ", sizeof("WRITEBUF ") -1)) {
-		return parse_writebuf_string(iiod, str + sizeof("WRITEBUF ") - 1);
-	} else if (!strncmp(str, "EXIT", sizeof("EXIT") - 1)) {
-		return tinyiiod_do_close_instance(iiod);
-	} else if (!strncmp(str, "TIMEOUT", sizeof("TIMEOUT") - 1)) {
-		tinyiiod_write_value(iiod, 0);
-		return 0;
-	} else if (!strncmp(str, "GETTRIG", sizeof("GETTRIG") - 1)) {
-		tinyiiod_write_value(iiod, -ENODEV);
-		return 0;
 	}
+
+	if (!strncmp(str, "READBUF ", sizeof("READBUF ") -1))
+		return parse_readbuf_string(iiod, str + sizeof("READBUF ") - 1);
+
+	if (!strncmp(str, "TIMEOUT ", sizeof("TIMEOUT ") - 1))
+		return parse_timeout_string(iiod, str + sizeof("TIMEOUT ") - 1);
+
+	if (!strncmp(str, "WRITEBUF ", sizeof("WRITEBUF ") -1))
+		return parse_writebuf_string(iiod, str + sizeof("WRITEBUF ") - 1);
+
+	if (!strncmp(str, "EXIT", sizeof("EXIT") - 1))
+		return tinyiiod_do_close_instance(iiod);
+
+	if (!strncmp(str, "GETTRIG", sizeof("GETTRIG") - 1))
+		tinyiiod_write_value(iiod, -ENODEV);
 
 	return -EINVAL;
 }

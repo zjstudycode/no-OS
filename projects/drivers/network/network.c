@@ -89,6 +89,7 @@ void network_keep_alive(void)
 ssize_t network_init(void)
 {
 	set_keep_alive(lwip_keep_alive);
+
 	return init_lwip();
 }
 
@@ -99,6 +100,7 @@ void network_start(void)
 {
 	struct tcp_pcb *pcb;
 	u16_t port = 30431;
+
 	pcb = tcp_new();
 	if (pcb != NULL) {
 		err_t err;
@@ -121,9 +123,10 @@ void network_start(void)
 *******************************************************************************/
 err_t network_accept(void *arg, struct tcp_pcb *newpcb, err_t err)
 {
-	err_t ret_err;
 	struct network_instance *es;
 	static int32_t inst_id = 0;
+	err_t ret_err;
+
 	inst_id++;
 
 	LWIP_UNUSED_ARG(arg);
@@ -162,6 +165,7 @@ err_t network_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
 {
 	struct network_instance *es;
 	err_t ret_err;
+
 	LWIP_ASSERT("arg != NULL",arg != NULL);
 	es = (struct network_instance *)arg;
 	if (p == NULL) {
@@ -242,6 +246,7 @@ void network_error(void *arg, err_t err)
 void network_store(struct tcp_pcb *tpcb, struct network_instance *es)
 {
 	struct pbuf *ptr;
+
 	while (es->p != NULL) {
 		u16_t plen;
 		u8_t freed;
@@ -285,33 +290,40 @@ void network_close(struct tcp_pcb *tpcb, struct network_instance *es)
 	tcp_close(tpcb);
 }
 
+static int32_t current_inst_id;
 /***************************************************************************//**
  * @brief network_read_line
 *******************************************************************************/
-ssize_t network_read_line(int32_t *instance_id, char *buf, size_t len)
+ssize_t network_read_line(char *buf, size_t len)
 {
-	return comm_read_line(&network_fifo, instance_id, buf, len);
+	ssize_t ret = comm_read_line(&network_fifo, &current_inst_id, buf, len);
+
+	return ret;
 }
 
 /***************************************************************************//**
  * @brief network_read
 *******************************************************************************/
-ssize_t network_read(int32_t *instance_id, char *buf, size_t len)
+ssize_t network_read(char *buf, size_t len)
 {
-	return comm_read(&network_fifo, instance_id, buf, len);
+	ssize_t ret = comm_read(&network_fifo, &current_inst_id, buf, len);
+
+	return ret;
 }
 
 /***************************************************************************//**
  * @brief network_write_data
 *******************************************************************************/
-ssize_t network_write_data(int32_t instance_id, const char *buf, size_t len)
+ssize_t network_write_data(const char *buf, size_t len)
 {
 	struct network_instance *instance = NULL;
 	u8_t apiflags = TCP_WRITE_FLAG_COPY;
-	err_t ret;
 	const char *pbuffer = buf;
+	err_t ret;
+
+
 	/* cppcheck-suppress uninitvar ; cppcheck reports this as a false positive */
-	HASH_FIND_INT( instances, &instance_id, instance);
+	HASH_FIND_INT( instances, &current_inst_id, instance);
 	if(instance == NULL)
 		return -ENXIO;
 	do {
@@ -334,21 +346,23 @@ ssize_t network_write_data(int32_t instance_id, const char *buf, size_t len)
 	do {
 		lwip_keep_alive();
 	} while(tcp_sndbuf(instance->pcb) == 0);
+
 	return 0;
 }
 
 /***************************************************************************//**
  * @brief network_exit
 *******************************************************************************/
-ssize_t network_close_instance(int32_t instance_id)
+ssize_t network_close_instance()
 {
 	struct network_instance *instance;
 	err_t err = 0;
+
 #ifdef DEBUG_NETWORK
 	printf("removing cleint instance: %"PRIi32"\n", instance_id);
 #endif
 	/* cppcheck-suppress uninitvar ; cppcheck reports this as a false positive */
-	HASH_FIND_INT( instances, &instance_id, instance);
+	HASH_FIND_INT( instances, &current_inst_id, instance);
 	if(instance == NULL)
 		return -ENOENT;
 	HASH_DEL(instances, instance);

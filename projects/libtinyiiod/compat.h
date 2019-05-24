@@ -18,9 +18,7 @@
 #ifndef COMPAT_H
 #define COMPAT_H
 
-
-
-
+#define _USE_STD_INT_TYPES
 #ifdef _USE_STD_INT_TYPES
 #include <stdint.h>
 #include <inttypes.h>
