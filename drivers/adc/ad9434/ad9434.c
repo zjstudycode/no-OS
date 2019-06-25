@@ -40,11 +40,9 @@
 /******************************************************************************/
 /***************************** Include Files **********************************/
 /******************************************************************************/
-#include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "platform_drivers.h"
-#include "adc_core.h"
+#include "delay.h"
 #include "ad9434.h"
 
 #define DCO_DEBUG

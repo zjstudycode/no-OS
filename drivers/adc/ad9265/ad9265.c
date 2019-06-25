@@ -44,7 +44,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include "adc_core.h"
-#include "platform_drivers.h"
+#include "delay.h"
 #include "ad9265.h"
 
 #define DCO_DEBUG

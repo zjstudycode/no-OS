@@ -44,6 +44,7 @@
 /***************************** Include Files **********************************/
 /******************************************************************************/
 #include <stdint.h>
+#include "spi.h"
 
 /******************************************************************************/
 /********************** Macros and Constants Definitions **********************/
@@ -133,11 +134,11 @@ struct adf4350_platform_data
 	uint32_t	clkin;
 	uint32_t	channel_spacing;
 	uint64_t	power_up_frequency;
- 
+
 	uint16_t	ref_div_factor; /* 10-bit R counter */
 	uint8_t	    ref_doubler_en;
 	uint8_t	    ref_div2_en;
- 
+
 	uint32_t    r2_user_settings;
 	uint32_t    r3_user_settings;
 	uint32_t    r4_user_settings;

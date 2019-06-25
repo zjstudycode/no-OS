@@ -1,9 +1,8 @@
 /***************************************************************************//**
- *   @file   platform_drivers.c
- *   @brief  Implementation of Generic Platform Drivers.
+ *   @file   i2c.c
  *   @author DBogdan (dragos.bogdan@analog.com)
 ********************************************************************************
- * Copyright 2017(c) Analog Devices, Inc.
+ * Copyright 2019(c) Analog Devices, Inc.
  *
  * All rights reserved.
  *
@@ -40,8 +39,9 @@
 /******************************************************************************/
 /***************************** Include Files **********************************/
 /******************************************************************************/
-#include <stdint.h>
-#include "platform_drivers.h"
+
+#include "error.h"
+#include "i2c.h"
 
 /******************************************************************************/
 /************************ Functions Definitions *******************************/
@@ -60,7 +60,7 @@ int32_t i2c_init(struct i2c_desc **desc,
 		// Unused variable - fix compiler warning
 	}
 
-	if (param->type) {
+	if (param->max_speed_hz) {
 		// Unused variable - fix compiler warning
 	}
 
@@ -147,212 +147,4 @@ int32_t i2c_read(struct i2c_desc *desc,
 	}
 
 	return SUCCESS;
-}
-
-/**
- * @brief Initialize the SPI communication peripheral.
- * @param desc - The SPI descriptor.
- * @param init_param - The structure that contains the SPI parameters.
- * @return SUCCESS in case of success, FAILURE otherwise.
- */
-int32_t spi_init(struct spi_desc **desc,
-		 const struct spi_init_param *param)
-{
-	if (desc) {
-		// Unused variable - fix compiler warning
-	}
-
-	if (param->type) {
-		// Unused variable - fix compiler warning
-	}
-
-	return SUCCESS;
-}
-
-/**
- * @brief Free the resources allocated by spi_init().
- * @param desc - The SPI descriptor.
- * @return SUCCESS in case of success, FAILURE otherwise.
- */
-int32_t spi_remove(struct spi_desc *desc)
-{
-	if (desc) {
-		// Unused variable - fix compiler warning
-	}
-
-	return SUCCESS;
-}
-
-/**
- * @brief Write and read data to/from SPI.
- * @param desc - The SPI descriptor.
- * @param data - The buffer with the transmitted/received data.
- * @param bytes_number - Number of bytes to write/read.
- * @return SUCCESS in case of success, FAILURE otherwise.
- */
-int32_t spi_write_and_read(struct spi_desc *desc,
-			   uint8_t *data,
-			   uint8_t bytes_number)
-{
-	if (desc) {
-		// Unused variable - fix compiler warning
-	}
-
-	if (data) {
-		// Unused variable - fix compiler warning
-	}
-
-	if (bytes_number) {
-		// Unused variable - fix compiler warning
-	}
-
-	return 0;
-}
-
-/**
- * @brief Obtain the GPIO decriptor.
- * @param desc - The GPIO descriptor.
- * @param gpio_number - The number of the GPIO.
- * @return SUCCESS in case of success, FAILURE otherwise.
- */
-int32_t gpio_get(struct gpio_desc **desc,
-		 uint8_t gpio_number)
-{
-	if (desc) {
-		// Unused variable - fix compiler warning
-	}
-
-	if (gpio_number) {
-		// Unused variable - fix compiler warning
-	}
-
-	return 0;
-}
-
-/**
- * @brief Free the resources allocated by gpio_get().
- * @param desc - The SPI descriptor.
- * @return SUCCESS in case of success, FAILURE otherwise.
- */
-int32_t gpio_remove(struct gpio_desc *desc)
-{
-	if (desc) {
-		// Unused variable - fix compiler warning
-	}
-
-	return SUCCESS;
-}
-
-/**
- * @brief Enable the input direction of the specified GPIO.
- * @param desc - The GPIO descriptor.
- * @return SUCCESS in case of success, FAILURE otherwise.
- */
-int32_t gpio_direction_input(struct gpio_desc *desc)
-{
-	if (desc) {
-		// Unused variable - fix compiler warning
-	}
-
-	return 0;
-}
-
-/**
- * @brief Enable the output direction of the specified GPIO.
- * @param desc - The GPIO descriptor.
- * @param value - The value.
- *                Example: GPIO_HIGH
- *                         GPIO_LOW
- * @return SUCCESS in case of success, FAILURE otherwise.
- */
-int32_t gpio_direction_output(struct gpio_desc *desc,
-			      uint8_t value)
-{
-	if (desc) {
-		// Unused variable - fix compiler warning
-	}
-
-	if (value) {
-		// Unused variable - fix compiler warning
-	}
-
-	return 0;
-}
-
-/**
- * @brief Get the direction of the specified GPIO.
- * @param desc - The GPIO descriptor.
- * @param direction - The direction.
- *                    Example: GPIO_OUT
- *                             GPIO_IN
- * @return SUCCESS in case of success, FAILURE otherwise.
- */
-int32_t gpio_get_direction(struct gpio_desc *desc,
-			   uint8_t *direction)
-{
-	if (desc) {
-		// Unused variable - fix compiler warning
-	}
-
-	if (direction) {
-		// Unused variable - fix compiler warning
-	}
-
-	return 0;
-}
-
-/**
- * @brief Set the value of the specified GPIO.
- * @param desc - The GPIO descriptor.
- * @param value - The value.
- *                Example: GPIO_HIGH
- *                         GPIO_LOW
- * @return SUCCESS in case of success, FAILURE otherwise.
- */
-int32_t gpio_set_value(struct gpio_desc *desc,
-		       uint8_t value)
-{
-	if (desc) {
-		// Unused variable - fix compiler warning
-	}
-
-	if (value) {
-		// Unused variable - fix compiler warning
-	}
-
-	return 0;
-}
-
-/**
- * @brief Get the value of the specified GPIO.
- * @param desc - The GPIO descriptor.
- * @param value - The value.
- *                Example: GPIO_HIGH
- *                         GPIO_LOW
- * @return SUCCESS in case of success, FAILURE otherwise.
- */
-int32_t gpio_get_value(struct gpio_desc *desc,
-		       uint8_t *value)
-{
-	if (desc) {
-		// Unused variable - fix compiler warning
-	}
-
-	if (value) {
-		// Unused variable - fix compiler warning
-	}
-
-	return 0;
-}
-
-/**
- * @brief Generate miliseconds delay.
- * @param msecs - Delay in miliseconds.
- * @return None.
- */
-void mdelay(uint32_t msecs)
-{
-	if (msecs) {
-		// Unused variable - fix compiler warning
-	}
 }

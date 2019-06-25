@@ -1,9 +1,8 @@
 /***************************************************************************//**
- *   @file   adxl372_i2c.c
- *   @brief  Implementation of adxl372 I2C Driver.
- *   @author SPopa (stefan.popa@analog.com)
+ *   @file   gpio.h
+ *   @author DBogdan (dragos.bogdan@analog.com)
 ********************************************************************************
- * Copyright 2018(c) Analog Devices, Inc.
+ * Copyright 2019(c) Analog Devices, Inc.
  *
  * All rights reserved.
  *
@@ -37,92 +36,62 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
-#include <stdlib.h>
-#include <stdbool.h>
-#include <string.h>
-#include "error.h"
-#include "adxl372.h"
+#ifndef GPIO_H_
+#define GPIO_H_
 
-/**
- * Read from device.
- * @param dev - The device structure.
- * @param reg_addr - The register address.
- * @param reg_data - The register data.
- * @return 0 in case of success, negative error code otherwise.
- */
-int32_t adxl372_i2c_reg_read(struct adxl372_dev *dev,
-			     uint8_t reg_addr,
-			     uint8_t *reg_data)
-{
-	uint8_t data;
-	int32_t ret;
+/******************************************************************************/
+/***************************** Include Files **********************************/
+/******************************************************************************/
 
-	data = reg_addr;
+#include <stdint.h>
 
-	ret = i2c_write(dev->i2c_desc, &data, 1, 0);
-	if (ret < 0)
-		return ret;
+/******************************************************************************/
+/********************** Macros and Constants Definitions **********************/
+/******************************************************************************/
 
-	ret = i2c_read(dev->i2c_desc, &data, 1, 0);
-	if (ret < 0)
-		return ret;
+#define GPIO_OUT	0x01
+#define GPIO_IN		0x00
 
-	*reg_data = data;
+#define GPIO_HIGH	0x01
+#define GPIO_LOW	0x00
 
-	return ret;
-}
+/******************************************************************************/
+/*************************** Types Declarations *******************************/
+/******************************************************************************/
 
-/**
- * Write to device.
- * @param dev - The device structure.
- * @param reg_addr - The register address.
- * @param reg_data - The register data.
- * @return 0 in case of success, negative error code otherwise.
- */
-int32_t adxl372_i2c_reg_write(struct adxl372_dev *dev,
-			      uint8_t reg_addr,
-			      uint8_t reg_data)
-{
-	uint8_t buf[2];
+typedef struct gpio_desc {
+	uint8_t		number;
+	void		*extra;
+} gpio_desc;
 
-	buf[0] = reg_addr;
-	buf[1] = reg_data & 0xFF;
+/******************************************************************************/
+/************************ Functions Declarations ******************************/
+/******************************************************************************/
 
-	return i2c_write(dev->i2c_desc, buf, ARRAY_SIZE(buf), 0);
-}
+/* Obtain the GPIO decriptor. */
+int32_t gpio_get(struct gpio_desc **desc,
+		 uint8_t gpio_number);
 
-/**
- * Multibyte read from device. A register read begins with the address
- * and autoincrements for each aditional byte in the transfer.
- * @param dev - The device structure.
- * @param reg_addr - The register address.
- * @param reg_data - The register data.
- * @param count - Number of bytes to read.
- * @return 0 in case of success, negative error code otherwise.
- */
-int32_t adxl372_i2c_reg_read_multiple(struct adxl372_dev *dev,
-				      uint8_t reg_addr,
-				      uint8_t *reg_data,
-				      uint16_t count)
-{
-	uint8_t buf[512];
-	int32_t ret;
+/* Free the resources allocated by gpio_get() */
+int32_t gpio_remove(struct gpio_desc *desc);
 
-	if (count > 512)
-		return FAILURE;
+/* Enable the input direction of the specified GPIO. */
+int32_t gpio_direction_input(struct gpio_desc *desc);
 
-	buf[0] = reg_addr;
-	memset(&buf[1], 0x00, count - 1);
+/* Enable the output direction of the specified GPIO. */
+int32_t gpio_direction_output(struct gpio_desc *desc,
+			      uint8_t value);
 
-	ret = i2c_write(dev->i2c_desc, buf, 1, 0);
-	if (ret < 0)
-		return ret;
+/* Get the direction of the specified GPIO. */
+int32_t gpio_get_direction(struct gpio_desc *desc,
+			   uint8_t *direction);
 
-	ret = i2c_read(dev->i2c_desc, buf, count, 0);
-	if (ret < 0)
-		return ret;
+/* Set the value of the specified GPIO. */
+int32_t gpio_set_value(struct gpio_desc *desc,
+		       uint8_t value);
 
-	memcpy(reg_data, buf, count);
+/* Get the value of the specified GPIO. */
+int32_t gpio_get_value(struct gpio_desc *desc,
+		       uint8_t *value);
 
-	return ret;
-}
+#endif // GPIO_H_

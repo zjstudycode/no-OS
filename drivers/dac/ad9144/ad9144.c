@@ -40,10 +40,10 @@
 /******************************************************************************/
 /***************************** Include Files **********************************/
 /******************************************************************************/
-#include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "platform_drivers.h"
+#include "delay.h"
+#include "util.h"
 #include "ad9144.h"
 
 struct ad9144_jesd204_link_mode {
@@ -678,4 +678,3 @@ int32_t ad9144_datapath_prbs_test(struct ad9144_dev *dev,
 
 	return ret;
 }
-

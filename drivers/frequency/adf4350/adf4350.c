@@ -43,7 +43,6 @@
 /******************************************************************************/
 #include <malloc.h>
 #include <stdio.h>
-#include "platform_drivers.h"
 #include "adf4350.h"
 
 /***************************************************************************//**
@@ -82,7 +81,7 @@ int32_t adf4350_sync_config(adf4350_dev *dev)
 		if ((dev->regs_hw[i] != dev->regs[i]) ||
 			((i == ADF4350_REG0) && doublebuf))
 		{
-			switch (i) 
+			switch (i)
 			{
 				case ADF4350_REG1:
 				case ADF4350_REG4:
@@ -113,7 +112,7 @@ int32_t adf4350_sync_config(adf4350_dev *dev)
 int32_t adf4350_tune_r_cnt(adf4350_dev *dev,
 						   uint16_t r_cnt)
 {
-	do 
+	do
 	{
 		r_cnt++;
 		dev->fpfd = (dev->clkin * (dev->pdata->ref_doubler_en ? 2 : 1)) /
@@ -165,7 +164,7 @@ int64_t adf4350_set_freq(adf4350_dev *dev,
 	if (freq > ADF4350_MAX_FREQ_45_PRESC) {
 		prescaler = ADF4350_REG1_PRESCALER;
 		mdiv = 75;
-	} 
+	}
 	else
 	{
 		prescaler = 0;
@@ -189,11 +188,11 @@ int64_t adf4350_set_freq(adf4350_dev *dev,
 
 	chspc = dev->chspc;
 
-	do  
+	do
 	{
-		do 
+		do
 		{
-			do  
+			do
 			{
 				r_cnt = adf4350_tune_r_cnt(dev, r_cnt);
 						dev->r1_mod = dev->fpfd / chspc;
@@ -208,12 +207,12 @@ int64_t adf4350_set_freq(adf4350_dev *dev,
 
 
 		tmp = freq * (uint64_t)dev->r1_mod + (dev->fpfd > 1);
-		
+
 		tmp = (tmp / dev->fpfd);	/* Div round closest (n + d/2)/d */
-		
+
 		dev->r0_fract = tmp % dev->r1_mod;
 		tmp = tmp / dev->r1_mod;
-		
+
 		dev->r0_int = tmp;
 	} while (mdiv > dev->r0_int);
 
@@ -403,7 +402,7 @@ int32_t adf4350_out_altvoltage0_frequency_resolution(adf4350_dev *dev,
 	{
 		dev->chspc = Hz;
 	}
-	
+
 	return dev->chspc;
 }
 
@@ -421,7 +420,7 @@ int64_t adf4350_out_altvoltage0_refin_frequency(adf4350_dev *dev,
 	{
 		dev->clkin = Hz;
 	}
-	
+
 	return dev->clkin;
 }
 
@@ -447,7 +446,7 @@ int32_t adf4350_out_altvoltage0_powerdown(adf4350_dev *dev,
 		dev->regs[ADF4350_REG2] &= ~ADF4350_REG2_POWER_DOWN_EN;
 		adf4350_sync_config(dev);
 	}
-	
+
 
 	return (dev->regs[ADF4350_REG2] & ADF4350_REG2_POWER_DOWN_EN);
 }
