@@ -1,7 +1,6 @@
-/***************************************************************************//**
+ /***************************************************************************//**
  *   @file   ad9361_tinyiiod.h
- *   @brief  Implementation of ad9361_tinyiiod
- *   @author Cristian Pop (cristian.pop@analog.com)
+ *   @brief  Header file of AD9361 Driver.
 ********************************************************************************
  * Copyright 2019(c) Analog Devices, Inc.
  *
