@@ -392,10 +392,6 @@ struct ad9361_rf_phy *ad9361_phy;
 struct ad9361_rf_phy *ad9361_phy_b;
 #endif
 
-#ifdef USE_LIBIIO
-extern struct tinyiiod_ops ops;
-#endif
-
 struct spi_init_param spi_param = {.id = SPI_DEVICE_ID, .mode = SPI_MODE_1, .chip_select = CLK_CS, .flags = 0};
 
 /***************************************************************************//**
@@ -576,8 +572,8 @@ int main(void)
 #ifdef USE_LIBIIO
 	axi_dmac_init(&ad9361_phy->tx_dmac, default_init_param.tx_dmac_init);
 	axi_dmac_init(&ad9361_phy->rx_dmac, default_init_param.rx_dmac_init);
-	/* Create the tinyiiod */
-	iiod = tinyiiod_create(xml, &ops);
+	/* Create the ad9361_tinyiiod */
+	iiod = ad9361_tinyiiod_create();
 
 #ifdef UART_INTERFACE
 	int32_t ret = serial_init();
