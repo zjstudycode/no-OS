@@ -52,7 +52,7 @@ adiHalErr_t ADIHAL_setTimeout(void *devHalInfo, uint32_t halTimeout_ms)
 {
 	return ADIHAL_OK;
 }
-
+#include "xilinx_platform_drivers.h"
 adiHalErr_t ADIHAL_openHw(void *devHalInfo, uint32_t halTimeout_ms)
 {
 	struct adi_hal *dev_hal_data = (struct adi_hal *)devHalInfo;
@@ -60,12 +60,13 @@ adiHalErr_t ADIHAL_openHw(void *devHalInfo, uint32_t halTimeout_ms)
 	int32_t status = 0;
 
 	status = gpio_get(&dev_hal_data->gpio_adrv_resetb, ADRV_RESETB);
-
-	spi_param.id = 0;
+	struct xil_spi_init_param xil_spi_param = {.id = 0, .flags = SPI_CS_DECODE};
+	//spi_param.id = 0;
 	spi_param.mode = SPI_MODE_0;
 	spi_param.chip_select = ADRV_CS;
+	spi_param.extra = &xil_spi_param;
 #ifndef ALTERA_PLATFORM
-	spi_param.flags = SPI_CS_DECODE;
+	//spi_param.flags = SPI_CS_DECODE;
 #endif
 	status |= spi_init(&dev_hal_data->spi_adrv_desc, &spi_param);
 

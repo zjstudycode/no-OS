@@ -196,6 +196,7 @@ adiHalErr_t AD9528_setSpiSettings(ad9528Device_t *device)
  *
  * \return Returns enum ADI_ERR, 0=pass, >0 = fail
 */
+#include "xilinx_platform_drivers.h"
 adiHalErr_t AD9528_initDeviceDataStruct(ad9528Device_t *device,
 					uint32_t vcxoFrequency_Hz, uint32_t refAFrequency_Hz,
 					uint32_t outputDeviceClock_Hz)
@@ -225,10 +226,11 @@ adiHalErr_t AD9528_initDeviceDataStruct(ad9528Device_t *device,
 
 	status = gpio_get(&device->gpio_resetb, CLK_RESETB);
 	status |= gpio_get(&device->gpio_sysref_req, ADRV_SYSREF_REQ);
-
-	spi_param.id = 0;
+	struct xil_spi_init_param xil_spi_param = {.id = 0};
+	//spi_param.id = 0;
 	spi_param.mode = SPI_MODE_0;
 	spi_param.chip_select = CLK_CS;
+	spi_param.extra = &xil_spi_param;
 	status |= spi_init(&device->spi_desc, &spi_param);
 
 	if (status != SUCCESS)
