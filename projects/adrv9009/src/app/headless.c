@@ -22,7 +22,10 @@
 #include "adi_hal.h"
 #include "platform_drivers.h"
 #include "parameters.h"
+#include "tinyiiod.h" // if included after util.h we get an error, todo
+#include "serial.h"
 #include "util.h"
+
 #include "ad9528.h"
 #ifdef ALTERA_PLATFORM
 #include "clk_altera_a10_fpll.h"
@@ -787,6 +790,28 @@ int main(void)
 
 	/* Initialize the DMAC and transfer 16384 samples from ADC to MEM */
 	axi_dmac_init(&rx_dmac, &rx_dmac_init);
+
+#define USE_LIBIIO
+#define UART_INTERFACE
+#ifdef USE_LIBIIO
+
+#ifdef UART_INTERFACE
+	struct tinyiiod *iiod;
+	/* Create the talise_tinyiiod */
+	status = talise_tinyiiod_create(rx_adc, rx_dmac, &iiod);
+	if(status < 0)
+		return status;
+
+	status = serial_init();
+	if(status < 0)
+		return status;
+
+	while(1) {
+		tinyiiod_read_command(iiod);
+	}
+#endif // UART_INTERFACE
+#endif // USE_LIBIIO
+
 	axi_dmac_transfer(rx_dmac,
 			  DDR_MEM_BASEADDR + 0x800000,
 			  16384 * 8);
