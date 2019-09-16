@@ -62,6 +62,8 @@
 #define SPI_ENGINE_REG_INT_SOURCE		0x88
 
 #define SPI_ENGINE_REG_SYNC_ID			0xc0
+#define SPI_ENGINE_SYNC_TRANSFER_BEGIN	0x01
+#define SPI_ENGINE_SYNC_TRANSFER_END	0x02
 
 #define SPI_ENGINE_REG_CMD_FIFO_ROOM		0xd0
 #define SPI_ENGINE_REG_SDO_FIFO_ROOM		0xd4
@@ -103,7 +105,7 @@
 #define SPI_ENGINE_MISC_SLEEP			0x1
 
 #define SPI_ENGINE_CMD(inst, arg1, arg2) \
-	(((inst) << 12) | ((arg1) << 8) | (arg2))
+	(((inst & 0x03) << 12) | ((arg1 & 0x03) << 8) | (arg2))
 
 #define SPI_ENGINE_CMD_TRANSFER(write, read, n) \
 	SPI_ENGINE_CMD(SPI_ENGINE_INST_TRANSFER, ((read) << 1 | (write)), (n))
@@ -212,8 +214,8 @@ typedef struct {
 typedef struct {
 	uint32_t	tx_buf_addr;
 	uint32_t	rx_buf_addr;
-	uint32_t	rx_buf[4];
-	uint32_t	tx_buf[4];
+	uint32_t	*rx_buf;
+	uint32_t	*tx_buf;
 	uint32_t	*spi_msg_cmds;
 	uint8_t		msg_cmd_len;
 } spi_eng_msg;

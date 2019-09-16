@@ -79,7 +79,10 @@
 #define GPIO_1_SYNC_OUT						GPIO_OFFSET + 17 // 49
 #define GPIO_1_RESET						GPIO_OFFSET + 16 // 48
 
-uint32_t spi_msg_cmds[6] = {CS_DEASSERT, CS_ASSERT, CS_DEASSERT, TRANSFER_BYTES_W(2), TRANSFER_BYTES_R(4), CS_ASSERT};
+uint32_t spi_msg_cmds[4] = {CS_ASSERT,
+							CS_DEASSERT,
+							TRANSFER_BYTES_R_W(1),
+							CS_ASSERT};
 
 struct ad77681_init_param ADC_default_init_param = {
 	/* SPI */
@@ -104,8 +107,9 @@ struct ad77681_init_param ADC_default_init_param = {
 	AD77681_POSITIVE_FS,		// diag_mux_sel
 	false,						// conv_diag_sel
 	AD77681_CONV_16BIT,			// conv_len
-	AD77681_CRC, 				// crc_sel
-	0 							// status_bit
+	AD77681_NO_CRC, 				// crc_sel
+	0, 							// status_bit
+	16							// spi transfer data width
 };
 
 /**
@@ -124,9 +128,9 @@ int main()
 {
 	struct ad77681_dev	*adc_dev;
 	spi_eng_msg 		*msg;
-	uint8_t			adc_data[5];
-	uint8_t 		*data;
-	uint32_t 		i;
+	uint32_t 			i;
+	uint8_t				adc_data[3];
+	uint32_t 			*data;
 
 	Xil_ICacheEnable();
 	Xil_DCacheEnable();
@@ -136,11 +140,11 @@ int main()
 	if (SPI_ENGINE_OFFLOAD_EXAMPLE == 0) {
 		while(1) {
 			ad77681_spi_read_adc_data(adc_dev, adc_data);
-			printf("[ADC DATA]: 0x");
+			xil_printf("[ADC DATA]: 0x");
 			for(i = 0; i < sizeof(adc_data) / sizeof(uint8_t); i++) {
-				printf("%x", adc_data[i]);
+				xil_printf("%x", adc_data[i]);
 			}
-			printf("\r\n");
+			xil_printf("\r\n");
 			mdelay(1000);
 		}
 	} else { // offload example
@@ -153,20 +157,17 @@ int main()
 		msg->rx_buf_addr = 0x800000;
 		msg->tx_buf_addr = 0xA000000;
 		msg->msg_cmd_len = sizeof(spi_msg_cmds) / sizeof(uint32_t);
-		msg->tx_buf[0] = AD77681_REG_READ(AD77681_REG_ADC_DATA);
-		msg->tx_buf[1] = 0x00;
-
+		spi_set_transfer_length(adc_dev->spi_desc, 32);
+		msg->tx_buf[0] = AD77681_REG_READ(AD77681_REG_ADC_DATA) << 24;
 		spi_eng_offload_load_msg(adc_dev->spi_desc, msg);
-		spi_eng_transfer_multiple_msgs(adc_dev->spi_desc, 8);
-
-		data = (uint8_t*)adc_dev->spi_desc->rx_dma_startaddr;
-
+		spi_eng_transfer_multiple_msgs(adc_dev->spi_desc, 1);
 		mdelay(10000);
 
-		for(i = 0; i < adc_dev->spi_desc->rx_length; i++) {
-			printf("%x\r\n", *data);
-			data += sizeof(uint8_t);
-		}
+		data = (uint32_t*)adc_dev->spi_desc->rx_dma_startaddr;
+
+		mdelay(1);
+
+		printf("%x\r\n", (unsigned int)*data);
 		free(msg);
 	}
 

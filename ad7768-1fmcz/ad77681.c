@@ -109,12 +109,14 @@ int32_t ad77681_spi_reg_read(struct ad77681_dev *dev,
 {
 	int32_t ret;
 	uint8_t buf[3];
-	uint8_t buf_len = (dev->crc_sel == AD77681_NO_CRC) ? 2 : 3;
+	uint8_t word_len = (dev->crc_sel == AD77681_NO_CRC) ? 16 : 24;
+
+	spi_set_transfer_length(dev->spi_desc, word_len);
 
 	buf[0] = AD77681_REG_READ(reg_addr);
 	buf[1] = 0x00;
 
-	ret = spi_write_and_read(dev->spi_desc, buf, buf_len);
+	ret = spi_write_and_read(dev->spi_desc, buf, word_len / 8);
 	if (ret < 0)
 		return ret;
 
@@ -181,10 +183,9 @@ int32_t ad77681_spi_write_mask(struct ad77681_dev *dev,
 	int32_t ret;
 
 	ret = ad77681_spi_reg_read(dev, reg_addr, reg_data);
-	ret = ad77681_spi_reg_read(dev, reg_addr, reg_data);
-	reg_data[1] &= ~mask;
-	reg_data[1] |= data;
-	ret |= ad77681_spi_reg_write(dev, reg_addr, reg_data[1]);
+	reg_data[0] &= ~mask;
+	reg_data[0] |= data;
+	ret |= ad77681_spi_reg_write(dev, reg_addr, reg_data[0]);
 
 	return ret;
 }
@@ -221,14 +222,24 @@ int32_t ad77681_spi_read_adc_data(struct ad77681_dev *dev,
 {
 	uint8_t crc_calc_buf[4], buf[4], crc;
 	uint8_t rx_tx_buf_len = ad77681_get_rx_buf_len(dev) + 1;
-	int32_t ret;
+	int32_t ret = 0;
 
 	buf[0] = AD77681_REG_READ(AD77681_REG_ADC_DATA);
 	buf[1] = 0x00;
 	buf[2] = 0x00;
 	buf[3] = 0x00;
 
-	ret = spi_write_and_read(dev->spi_desc, buf, rx_tx_buf_len);
+
+	ret |= ad77681_spi_write_mask(dev,
+			       AD77681_REG_CONVERSION,
+			       AD77681_CONVERSION_MODE_MSK,
+			       AD77681_CONVERSION_MODE(AD77681_CONV_SINGLE));
+	spi_set_transfer_length(dev->spi_desc,32);
+	ret |= spi_write_and_read(dev->spi_desc, buf, rx_tx_buf_len);
+	ret |= ad77681_spi_write_mask(dev,
+			       AD77681_REG_CONVERSION,
+			       AD77681_CONVERSION_MODE_MSK,
+			       AD77681_CONVERSION_MODE(AD77681_CONV_CONTINUOUS));
 	if (ret < 0)
 		return ret;
 
@@ -473,6 +484,7 @@ int32_t ad77681_setup(struct ad77681_dev **device,
 	dev->status_bit = init_param.status_bit;
 
 	spi_init(&dev->spi_desc, init_param.spi_eng_dev_init);
+	spi_set_transfer_length(dev->spi_desc, init_param.data_width);
 
 	ret |= ad77681_soft_reset(dev);
 	ret |= ad77681_set_power_mode(dev, dev->power_mode);

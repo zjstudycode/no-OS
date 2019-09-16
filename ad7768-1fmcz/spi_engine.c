@@ -140,6 +140,42 @@ void spi_set_transfer_length(spi_desc *desc, uint8_t data_length)
 		desc->data_width = data_length;
 }
 
+/***************************************************************************//**
+* @brief get_words_number
+*******************************************************************************/
+#ifdef DUAL_SPI
+uint8_t spi_get_words_number(spi_eng_desc *desc, uint8_t bytes_number)
+#else
+uint8_t spi_get_words_number(spi_desc *desc, uint8_t bytes_number)
+#endif
+{
+	uint8_t xfer_word_len, xfer_words_number;
+
+	/*
+	 * Each spi engine transaction equals data_width bytes
+	 */
+
+	xfer_word_len = desc->data_width / 8;
+	xfer_words_number = bytes_number / xfer_word_len;
+
+	if ((bytes_number % xfer_word_len) != 0)
+		xfer_words_number++;
+
+	return xfer_words_number;
+}
+
+/***************************************************************************//**
+* @brief get_words_number
+*******************************************************************************/
+#ifdef DUAL_SPI
+uint8_t spi_get_word_lenght(spi_eng_desc *desc)
+#else
+uint8_t spi_get_word_lenght(spi_desc *desc)
+#endif
+{
+	return desc->data_width / 8;
+}
+
 /**
  * @brief Write and read data to/from SPI.
  * @param desc - The SPI descriptor.
@@ -161,22 +197,20 @@ int32_t spi_write_and_read(spi_desc *desc,
 	 * Note:  This function works like a classic SPI
 	 */
 	spi_eng_msg *msg;
-	uint8_t i;
+	uint8_t i, xfer_word_len, xfer_words_number;
 	uint32_t spi_eng_msg_cmds[4];
-	uint32_t xfer_bytes_number;
-	uint8_t data_width, data_width_bytes;
 	int32_t ret;
 
-	data_width = desc->max_data_width;
-	data_width_bytes = data_width / 8;
 	/*
 	 * Each spi engine transaction equals data_width bytes
 	 */
-	xfer_bytes_number = (bytes_number % data_width_bytes) == 0 ?
-			    bytes_number : bytes_number + 1;
+
+	xfer_word_len = spi_get_word_lenght(desc);
+	xfer_words_number = spi_get_words_number(desc, bytes_number);
+
 	spi_eng_msg_cmds[0] = CS_ASSERT;
 	spi_eng_msg_cmds[1] = CS_DEASSERT;
-	spi_eng_msg_cmds[2] = TRANSFER_BYTES_R_W(xfer_bytes_number);
+	spi_eng_msg_cmds[2] = TRANSFER_BYTES_R_W(xfer_words_number);
 	spi_eng_msg_cmds[3] = CS_ASSERT;
 
 	msg = (spi_eng_msg *)malloc(sizeof(*msg));
@@ -187,21 +221,28 @@ int32_t spi_write_and_read(spi_desc *desc,
 	msg->spi_msg_cmds = spi_eng_msg_cmds;
 	msg->msg_cmd_len = ARRAY_SIZE(spi_eng_msg_cmds);
 
+	msg->tx_buf = (uint32_t *)malloc(xfer_words_number * sizeof(msg->tx_buf));
+	msg->rx_buf = (uint32_t *)malloc(xfer_words_number * sizeof(msg->rx_buf));
+
 	// Init the rx and tx buffers with 0s
-	for (i = 0; i < ARRAY_SIZE(msg->tx_buf); i++) {
+	for (i = 0; i < xfer_words_number; i++) {
 		msg->tx_buf[i] = 0;
 		msg->rx_buf[i] = 0;
 	}
 
 	for (i = 0; i < bytes_number; i++)
-		msg->tx_buf[i/data_width_bytes] |= data[i] << (data_width - 8 - 8 * i);
+		msg->tx_buf[i / xfer_word_len] |=
+			data[i] << (desc->data_width - (i % xfer_word_len + 1) * 8);
 
 	ret = spi_eng_transfer_message(desc, msg);
-	usleep(1000000); // 1s
 
-	for (i = 0; i < bytes_number; i++)
-		data[i] = msg->rx_buf[i / data_width_bytes]; //>> (data_width - 8 - 8 * i);
+	// Skip the first byte ( dummy read byte )
+	for (i = 1; i < bytes_number; i++)
+		data[i - 1] = msg->rx_buf[(i) / xfer_word_len] >>
+			      (desc->data_width - ((i) % xfer_word_len + 1) * 8);
 
+	free(msg->tx_buf);
+	free(msg->rx_buf);
 	free(msg);
 
 	return ret;
@@ -234,32 +275,6 @@ uint32_t spi_get_sleep_div(spi_desc *desc,
 		    ((desc->clk_div + 1) * 2) - 1;
 
 	return sleep_div;
-}
-
-/***************************************************************************//**
-* @brief get_words_number
-*******************************************************************************/
-#ifdef DUAL_SPI
-uint8_t spi_get_words_number(spi_eng_desc *desc, uint8_t bytes_number)
-#else
-uint8_t spi_get_words_number(spi_desc *desc, uint8_t bytes_number)
-#endif
-{
-	uint8_t words_number = 0;
-	uint8_t	data_width	= desc->max_data_width;
-	uint8_t data_width_bytes = desc->data_width / 8;
-
-	/* If the number of bytes to transfer is lower than the data width, then
-	 * the transfer is 1 word long
-	 */
-	if ((bytes_number * 8) < data_width)
-		words_number = 1;
-	else if (bytes_number % data_width_bytes)
-		words_number = (bytes_number / data_width_bytes) + 1;
-	else
-		words_number = bytes_number / data_width_bytes;
-
-	return words_number;
 }
 
 /***************************************************************************//**
@@ -458,13 +473,16 @@ int32_t spi_eng_compile_message(spi_desc *desc,
 				SPI_ENGINE_CMD_WRITE(SPI_ENGINE_CMD_DATA_TRANSFER_LEN,
 						desc->data_width));
 
+	// SYNC to signal transfer beginning
+	spi_eng_program_add_cmd(xfer,
+				SPI_ENGINE_CMD_SYNC(SPI_ENGINE_SYNC_TRANSFER_BEGIN));
 
 	for (i = 0; i < n; i++)
 		spi_eng_add_user_cmd(desc, xfer, msg->spi_msg_cmds[i]);
 
-	// SYNC
+	// SYNC to signal transfer end
 	spi_eng_program_add_cmd(xfer,
-				SPI_ENGINE_CMD_SYNC(0));
+				SPI_ENGINE_CMD_SYNC(SPI_ENGINE_SYNC_TRANSFER_END));
 
 	return 0;
 }
@@ -479,10 +497,10 @@ int32_t spi_eng_transfer_message(spi_desc *desc, spi_eng_msg *msg)
 #endif
 {
 	spi_eng_transfer_fifo *xfer;
-	uint8_t words_number;
 	uint32_t size;
 	uint32_t i;
 	uint32_t data;
+	uint32_t sync_id;
 
 	size = sizeof(*xfer->cmd_fifo) * (msg->msg_cmd_len + 3);
 
@@ -501,16 +519,23 @@ int32_t spi_eng_transfer_message(spi_desc *desc, spi_eng_msg *msg)
 	 * On each spi write command, one word is transfered. Typically 16 bits
 	 * tx_length = param is deduced from TRANSFER_W(param)
 	 */
-	words_number = spi_get_words_number(desc, desc->tx_length);
-	for(i = 0; i < words_number; i++)
+	for(i = 0; i < desc->tx_length; i++)
 		spi_eng_write(desc, SPI_ENGINE_REG_SDO_DATA_FIFO, msg->tx_buf[i]);
+
+
+	/*
+	 *	Wait for all the transactions to finish
+	 *
+	 */
+
+	do spi_eng_read(desc, SPI_ENGINE_REG_SYNC_ID, &sync_id);
+	while(sync_id != SPI_ENGINE_SYNC_TRANSFER_END);
 
 	/*
 	 * On each spi read command, one word is transfered. Typically 16 bits.
 	 * rx_length = param is deduced from TRANSFER_R(param)
 	 */
-	words_number = spi_get_words_number(desc, desc->rx_length);
-	for(i = 0; i < words_number; i++) {
+	for(i = 0; i < desc->rx_length; i++) {
 		spi_eng_read(desc, SPI_ENGINE_REG_SDI_DATA_FIFO, &data);
 		msg->rx_buf[i] = data;
 	}

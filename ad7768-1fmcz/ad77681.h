@@ -335,6 +335,7 @@ struct ad77681_init_param {
 	enum ad77681_conv_len		conv_len;
 	enum ad77681_crc_sel 		crc_sel;
 	uint8_t					status_bit;
+	uint8_t						data_width;
 };
 
 /******************************************************************************/
