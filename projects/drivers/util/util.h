@@ -43,6 +43,8 @@
 /***************************** Include Files **********************************/
 /******************************************************************************/
 #include <stdint.h>
+#include <stdbool.h>
+
 
 /******************************************************************************/
 /********************** Macros and Constants Definitions **********************/
@@ -107,5 +109,10 @@ uint32_t hweight8(uint32_t word);
 /* Calculate the quotient and the remainder of an integer division. */
 uint64_t do_div(uint64_t* n,
 		uint64_t base);
+
+bool strequal(const char *str1, const char *str2);
+int32_t read_value(const char *str);
+uint32_t read_ul_value(const char *str);
+
 #endif // UTIL_H_
 
