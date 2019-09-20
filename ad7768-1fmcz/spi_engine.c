@@ -1,9 +1,9 @@
 /***************************************************************************//**
- *   @file   spi.c
+ *   @file   spi_engine.c
  *   @brief  Implementation of SPI Engine Driver.
  *   @author ADI
 ********************************************************************************
- * Copyright 2017(c) Analog Devices, Inc.
+ * Copyright 2019(c) Analog Devices, Inc.
  *
  * All rights reserved.
  *
@@ -49,8 +49,37 @@
 #include <xscugic.h>
 #include <xparameters.h>
 #include <sleep.h>
-#include "spi_engine.h"
 #include "xil_printf.h"
+#include "spi.h"
+#include "spi_engine.h"
+
+/******************************************************************************/
+/********************** Macros and Constants Definitions **********************/
+/******************************************************************************/
+
+#define ARRAY_SIZE(x)	(sizeof(x) / sizeof((x)[0]))
+
+
+
+static inline struct spi_init_param_extra *cast_to_extra_init(void* void_param)
+{
+	return (struct spi_init_param_extra*)void_param;
+}
+
+static inline void *cast_from_extra_init(struct spi_init_param_extra *eng_param)
+{
+	return (uint8_t *)eng_param;
+}
+
+static inline struct spi_desc_extra *cast_to_extra_desc(void* void_desc)
+{
+	return (struct spi_desc_extra*)void_desc;
+}
+
+static inline void *cast_from_extra_desc(struct spi_desc_extra *eng_desc)
+{
+	return (uint8_t *)eng_desc;
+}
 
 /******************************************************************************/
 /************************** Functions Implementation **************************/
@@ -59,15 +88,9 @@
 /***************************************************************************//**
 * @brief spi_eng_write
 *******************************************************************************/
-#ifdef DUAL_SPI
-int32_t spi_eng_write(spi_eng_desc *desc,
+int32_t spi_eng_write(spi_desc_extra *desc,
 		      uint32_t reg_addr,
 		      uint32_t ui32data)
-#else
-int32_t spi_eng_write(spi_desc *desc,
-		      uint32_t reg_addr,
-		      uint32_t ui32data)
-#endif
 {
 	Xil_Out32((desc->spi_baseaddr + reg_addr), ui32data);
 
@@ -77,15 +100,9 @@ int32_t spi_eng_write(spi_desc *desc,
 /***************************************************************************//**
 * @brief spi_eng_read
 *******************************************************************************/
-#ifdef DUAL_SPI
-int32_t spi_eng_read(spi_eng_desc *desc,
+int32_t spi_eng_read(spi_desc_extra *desc,
 		     uint32_t reg_addr,
 		     uint32_t *reg_data)
-#else
-int32_t spi_eng_read(spi_desc *desc,
-		     uint32_t reg_addr,
-		     uint32_t *reg_data)
-#endif
 {
 	*reg_data = Xil_In32((desc->spi_baseaddr + reg_addr));
 
@@ -95,15 +112,9 @@ int32_t spi_eng_read(spi_desc *desc,
 /***************************************************************************//**
 * @brief spi_eng_dma_write
 *******************************************************************************/
-#ifdef DUAL_SPI
-int32_t spi_eng_dma_write(spi_eng_desc *desc,
+int32_t spi_eng_dma_write(spi_desc_extra *desc,
 			  uint32_t reg_addr,
 			  uint32_t reg_data)
-#else
-int32_t spi_eng_dma_write(spi_desc *desc,
-			  uint32_t reg_addr,
-			  uint32_t reg_data)
-#endif
 {
 	Xil_Out32((desc->spi_offload_tx_dma_baseaddr + reg_addr), reg_data);
 
@@ -113,41 +124,32 @@ int32_t spi_eng_dma_write(spi_desc *desc,
 /***************************************************************************//**
 * @brief spi_eng_dma_read
 *******************************************************************************/
-#ifdef DUAL_SPI
-int32_t spi_eng_dma_read(spi_eng_desc *desc,
+int32_t spi_eng_dma_read(spi_desc_extra *desc,
 			 uint32_t reg_addr,
 			 uint32_t *reg_data)
-#else
-int32_t spi_eng_dma_read(spi_desc *desc,
-			 uint32_t reg_addr,
-			 uint32_t *reg_data)
-#endif
 {
 	*reg_data = Xil_In32((desc->spi_offload_rx_dma_baseaddr + reg_addr));
 
 	return 0;
 }
 
-#ifdef DUAL_SPI
-void spi_set_transfer_length(spi_eng_desc *desc, uint8_t data_length)
-#else
-void spi_set_transfer_length(spi_desc *desc, uint8_t data_length)
-#endif
+void spi_set_transfer_length(spi_desc*desc, uint8_t data_length)
 {
-	if (data_length > desc->max_data_width)
-		desc->data_width = desc->max_data_width;
+	spi_desc_extra		*desc_extra;
+
+	desc_extra = cast_to_extra_desc(desc->extra);
+	if (data_length > desc_extra->max_data_width)
+		desc_extra->data_width = desc_extra->max_data_width;
 	else
-		desc->data_width = data_length;
+		desc_extra->data_width = data_length;
+
+	desc->extra = cast_from_extra_desc(desc_extra);
 }
 
 /***************************************************************************//**
 * @brief get_words_number
 *******************************************************************************/
-#ifdef DUAL_SPI
-uint8_t spi_get_words_number(spi_eng_desc *desc, uint8_t bytes_number)
-#else
-uint8_t spi_get_words_number(spi_desc *desc, uint8_t bytes_number)
-#endif
+uint8_t spi_get_words_number(spi_desc_extra *desc, uint8_t bytes_number)
 {
 	uint8_t xfer_word_len, xfer_words_number;
 
@@ -155,7 +157,7 @@ uint8_t spi_get_words_number(spi_desc *desc, uint8_t bytes_number)
 	 * Each spi engine transaction equals data_width bytes
 	 */
 
-	xfer_word_len = desc->data_width / 8;
+ 	xfer_word_len = desc->data_width / 8;
 	xfer_words_number = bytes_number / xfer_word_len;
 
 	if ((bytes_number % xfer_word_len) != 0)
@@ -167,13 +169,332 @@ uint8_t spi_get_words_number(spi_desc *desc, uint8_t bytes_number)
 /***************************************************************************//**
 * @brief get_words_number
 *******************************************************************************/
-#ifdef DUAL_SPI
-uint8_t spi_get_word_lenght(spi_eng_desc *desc)
-#else
-uint8_t spi_get_word_lenght(spi_desc *desc)
-#endif
+uint8_t spi_get_word_lenght(spi_desc_extra *desc)
 {
 	return desc->data_width / 8;
+}
+
+/***************************************************************************//**
+* @brief check_dma_config
+*******************************************************************************/
+uint8_t spi_check_dma_config(spi_desc_extra *desc,
+			     uint8_t rx,
+			     uint8_t tx)
+{
+	if(desc->offload_configured) {
+		if(rx && !desc->spi_offload_rx_support_en)
+			return 0;
+
+		if(tx && !desc->spi_offload_tx_support_en)
+			return 0;
+	}
+	return 1;
+}
+
+/***************************************************************************//**
+* @brief get_sleep_div
+*******************************************************************************/
+uint32_t spi_get_sleep_div(spi_desc *desc,
+			   uint32_t sleep_time_ns)
+{
+	uint32_t sleep_div = 0;
+	spi_desc_extra		*desc_extra;
+
+	desc_extra = cast_to_extra_desc(desc->extra);
+
+	sleep_div = (desc->max_speed_hz / 1000000 * sleep_time_ns / 1000) /
+		    ((desc_extra->clk_div + 1) * 2) - 1;
+
+	return sleep_div;
+}
+
+/***************************************************************************//**
+* @brief spi_eng_program_add_cmd
+*******************************************************************************/
+void spi_eng_program_add_cmd(spi_eng_transfer_fifo *xfer,
+			     uint16_t cmd)
+{
+	xfer->cmd_fifo[xfer->cmd_fifo_len] = cmd;
+	xfer->cmd_fifo_len++;
+}
+
+/***************************************************************************//**
+* @brief spi_eng_gen_transfer
+*******************************************************************************/
+int32_t spi_eng_gen_transfer(spi_desc_extra *desc,
+			     spi_eng_transfer_fifo *xfer,
+			     bool write,
+			     bool read,
+			     uint8_t bytes_number)
+{
+	uint8_t words_number;
+
+	words_number = spi_get_words_number(desc, bytes_number);
+
+	spi_eng_program_add_cmd(xfer,
+				SPI_ENGINE_CMD_TRANSFER(write,
+						read,
+						words_number - 1));
+	return 0;
+}
+
+/***************************************************************************//**
+* @brief spi_eng_gen_cs
+*******************************************************************************/
+void spi_eng_gen_cs(spi_desc *desc,
+		    spi_eng_transfer_fifo *xfer,
+		    bool assert)
+{
+	uint8_t mask = 0xff;
+	spi_desc_extra		*desc_extra;
+
+	desc_extra = cast_to_extra_desc(desc->extra);
+	if (!assert)
+		mask ^= BIT(desc->chip_select);
+
+	spi_eng_program_add_cmd(xfer, SPI_ENGINE_CMD_ASSERT(desc_extra->cs_delay, mask));
+}
+
+/***************************************************************************//**
+* @brief spi_gen_sleep_ns
+*******************************************************************************/
+void spi_gen_sleep_ns(spi_desc *desc,
+		      spi_eng_transfer_fifo *xfer,
+		      uint32_t sleep_time_ns)
+{
+	uint32_t sleep_div;
+
+	sleep_div = spi_get_sleep_div(desc, sleep_time_ns); // default 5us
+	// Wait for the device to do the conversion
+	spi_eng_program_add_cmd(xfer,
+				SPI_ENGINE_CMD_SLEEP(sleep_div));
+}
+
+/***************************************************************************//**
+* @brief spi_eng_add_user_cmd
+*******************************************************************************/
+void spi_eng_add_user_cmd(spi_desc *desc,
+			  spi_eng_transfer_fifo *xfer,
+			  uint32_t cmd)
+{
+	uint32_t cmd_msk = (0xF << 28);
+	uint32_t param_msk = cmd & (~cmd_msk);
+	uint32_t command;
+	uint16_t param;
+	spi_desc_extra		*desc_extra;
+
+	desc_extra = cast_to_extra_desc(desc->extra);
+
+	command = (cmd & cmd_msk);
+	param = (cmd & param_msk);
+
+	switch(command) {
+	case CS_DEASSERT:
+		spi_eng_gen_cs(desc, xfer, false); // reset chip select
+		break;
+
+	case CS_ASSERT:
+		spi_eng_gen_cs(desc, xfer, true); // set chip select
+		break;
+
+	case SLEEP_CMD:
+		spi_gen_sleep_ns(desc, xfer, param); // Sleep
+		break;
+
+	case TRANSFER_R_CMD:
+		if(spi_check_dma_config(desc_extra, 1, 0)) {
+			spi_eng_gen_transfer(desc_extra, xfer, false, true, param); // read
+			desc_extra->rx_length = param;
+		} else {
+			printf("%s: DMA Rx not configured.\n", __func__);
+			desc_extra->rx_length = 0;
+		}
+
+		break;
+
+	case TRANSFER_W_CMD:
+		if(spi_check_dma_config(desc_extra, 0, 1)) {
+			spi_eng_gen_transfer(desc_extra, xfer, true, false, param); // write
+			desc_extra->tx_length = param;
+		} else {
+			printf("%s: DMA Tx not configured.\n", __func__);
+			desc_extra->tx_length = 0;
+		}
+		break;
+
+	case TRANSFER_R_W_CMD:
+		if(spi_check_dma_config(desc_extra, 1, 1)) {
+			spi_eng_gen_transfer(desc_extra, xfer, true, true, param); // read and write
+			desc_extra->tx_length = param;
+			desc_extra->rx_length = param;
+		} else {
+			printf("%s: DMA Rx and Tx not configured.\n", __func__);
+			desc_extra->tx_length = 0;
+			desc_extra->rx_length = 0;
+		}
+		break;
+
+	default:
+		break;
+	}
+}
+
+/***************************************************************************//**
+* @brief spi_eng_compile_message
+*******************************************************************************/
+int32_t spi_eng_compile_message(spi_desc *desc,
+				spi_eng_msg *msg,
+				spi_eng_transfer_fifo *xfer)
+{
+	uint32_t i, n = 0;
+	spi_desc_extra		*desc_extra;
+
+	desc_extra = cast_to_extra_desc(desc->extra);
+
+	n = msg->msg_cmd_len;
+
+	// configure prescale
+	spi_eng_program_add_cmd(xfer,
+				SPI_ENGINE_CMD_WRITE(SPI_ENGINE_CMD_REG_CLK_DIV,
+						desc_extra->clk_div));
+	// SPI configuration (3W/CPOL/CPHA)
+	spi_eng_program_add_cmd(xfer,
+				SPI_ENGINE_CMD_WRITE(SPI_ENGINE_CMD_REG_CONFIG,
+						desc->mode));
+
+	// Data transfer length
+	spi_eng_program_add_cmd(xfer,
+				SPI_ENGINE_CMD_WRITE(SPI_ENGINE_CMD_DATA_TRANSFER_LEN,
+						desc_extra->data_width));
+
+	// SYNC to signal transfer beginning
+	spi_eng_program_add_cmd(xfer,
+				SPI_ENGINE_CMD_SYNC(SPI_ENGINE_SYNC_TRANSFER_BEGIN));
+
+	for (i = 0; i < n; i++)
+		spi_eng_add_user_cmd(desc, xfer, msg->spi_msg_cmds[i]);
+
+	// SYNC to signal transfer end
+	spi_eng_program_add_cmd(xfer,
+				SPI_ENGINE_CMD_SYNC(SPI_ENGINE_SYNC_TRANSFER_END));
+
+	return 0;
+}
+
+/***************************************************************************//**
+* @brief spi_eng_transfer_message
+*******************************************************************************/
+int32_t spi_eng_transfer_message(spi_desc *desc, spi_eng_msg *msg)
+{
+	spi_eng_transfer_fifo *xfer;
+	uint32_t size;
+	uint32_t i;
+	uint32_t data;
+	uint32_t sync_id;
+	spi_desc_extra		*desc_extra;
+
+	desc_extra = cast_to_extra_desc(desc->extra);
+
+	size = sizeof(*xfer->cmd_fifo) * (msg->msg_cmd_len + 3);
+
+	xfer = (spi_eng_transfer_fifo *)malloc(sizeof(*xfer) + size);
+	if (!xfer)
+		return -1;
+
+	xfer->cmd_fifo_len = 0;
+	spi_eng_compile_message(desc, msg, xfer);
+
+	// CMD FIFO
+	for (i = 0; i < xfer->cmd_fifo_len; i++)
+		spi_eng_write(desc_extra, SPI_ENGINE_REG_CMD_FIFO, xfer->cmd_fifo[i]);
+
+	/*
+	 * On each spi write command, one word is transfered. Typically 16 bits
+	 * tx_length = param is deduced from TRANSFER_W(param)
+	 */
+	for(i = 0; i < desc_extra->tx_length; i++)
+		spi_eng_write(desc_extra, SPI_ENGINE_REG_SDO_DATA_FIFO, msg->tx_buf[i]);
+
+
+	/*
+	 *	Wait for all the transactions to finish
+	 *
+	 */
+
+	do spi_eng_read(desc_extra, SPI_ENGINE_REG_SYNC_ID, &sync_id);
+	while(sync_id != SPI_ENGINE_SYNC_TRANSFER_END);
+
+	/*
+	 * On each spi read command, one word is transfered. Typically 16 bits.
+	 * rx_length = param is deduced from TRANSFER_R(param)
+	 */
+	for(i = 0; i < desc_extra->rx_length; i++) {
+		spi_eng_read(desc_extra, SPI_ENGINE_REG_SDI_DATA_FIFO, &data);
+		msg->rx_buf[i] = data;
+	}
+
+	free(xfer);
+
+	return 0;
+}
+
+/***************************************************************************//**
+* @brief spi_eng_init
+*******************************************************************************/
+
+int32_t spi_init(struct spi_desc **desc,
+		 const struct spi_init_param *param)
+{
+	struct spi_desc		*descriptor;
+	struct spi_desc_extra		*desc_extra;
+	struct spi_init_param_extra	*init_extra;
+	uint32_t        	data_width;
+
+	descriptor = (struct spi_desc *)malloc(sizeof(*descriptor));
+	desc_extra = (struct spi_desc_extra*)malloc(sizeof(*desc_extra));
+
+	if (!descriptor || !desc_extra)
+		return -1;
+
+	init_extra = cast_to_extra_init(param->extra);
+
+	descriptor->max_speed_hz = param->max_speed_hz;
+	descriptor->chip_select = param->chip_select;
+	descriptor->mode = param->mode;
+
+	desc_extra->rx_length = 0;
+	desc_extra->tx_length = 0;
+	desc_extra->clk_div =
+		descriptor->max_speed_hz /
+		(2 * init_extra->spi_clk_hz) - 1;
+	desc_extra->spi_baseaddr =
+		init_extra->spi_baseaddr;
+	desc_extra->spi_clk_hz =
+		init_extra->spi_clk_hz;
+	desc_extra->spi_offload_rx_support_en =
+		init_extra->spi_offload_rx_support_en;
+	desc_extra->spi_offload_tx_support_en =
+		init_extra->spi_offload_tx_support_en;
+	desc_extra->spi_offload_tx_dma_baseaddr =
+		init_extra->spi_offload_tx_dma_baseaddr;
+	desc_extra->spi_offload_rx_dma_baseaddr =
+		init_extra->spi_offload_rx_dma_baseaddr;
+
+	// perform a reset
+	spi_eng_write(desc_extra, SPI_ENGINE_REG_RESET, 0x01);
+	usleep(100000);
+	spi_eng_write(desc_extra, SPI_ENGINE_REG_RESET, 0x00);
+
+	// get current data width
+	spi_eng_read(desc_extra, SPI_ENGINE_REG_DATA_WIDTH, &data_width);
+	desc_extra->max_data_width = data_width;
+	desc_extra->data_width = data_width;
+	//spi_set_transfer_length(desc_extra, desc_extra->max_data_width);
+
+	descriptor->extra = desc_extra;
+	*desc = descriptor;
+
+	return 0;
 }
 
 /**
@@ -183,20 +504,15 @@ uint8_t spi_get_word_lenght(spi_desc *desc)
  * @param bytes_number - Number of bytes to write/read.
  * @return SUCCESS in case of success, FAILURE otherwise.
  */
-#ifdef DUAL_SPI
-int32_t spi_eng_write_and_read(spi_eng_desc *desc,
-			       uint8_t *data,
-			       uint8_t bytes_number)
-#else
 int32_t spi_write_and_read(spi_desc *desc,
 			   uint8_t *data,
 			   uint8_t bytes_number)
-#endif
 {
 	/*
 	 * Note:  This function works like a classic SPI
 	 */
 	spi_eng_msg *msg;
+	spi_desc_extra		*desc_extra;
 	uint8_t i, xfer_word_len, xfer_words_number;
 	uint32_t spi_eng_msg_cmds[4];
 	int32_t ret;
@@ -204,9 +520,10 @@ int32_t spi_write_and_read(spi_desc *desc,
 	/*
 	 * Each spi engine transaction equals data_width bytes
 	 */
+	desc_extra = desc->extra;
 
-	xfer_word_len = spi_get_word_lenght(desc);
-	xfer_words_number = spi_get_words_number(desc, bytes_number);
+	xfer_word_len = spi_get_word_lenght(desc_extra);
+	xfer_words_number = spi_get_words_number(desc_extra, bytes_number);
 
 	spi_eng_msg_cmds[0] = CS_ASSERT;
 	spi_eng_msg_cmds[1] = CS_DEASSERT;
@@ -232,14 +549,14 @@ int32_t spi_write_and_read(spi_desc *desc,
 
 	for (i = 0; i < bytes_number; i++)
 		msg->tx_buf[i / xfer_word_len] |=
-			data[i] << (desc->data_width - (i % xfer_word_len + 1) * 8);
+			data[i] << (desc_extra->data_width - (i % xfer_word_len + 1) * 8);
 
 	ret = spi_eng_transfer_message(desc, msg);
 
 	// Skip the first byte ( dummy read byte )
 	for (i = 1; i < bytes_number; i++)
 		data[i - 1] = msg->rx_buf[(i) / xfer_word_len] >>
-			      (desc->data_width - ((i) % xfer_word_len + 1) * 8);
+			(desc_extra->data_width - ((i) % xfer_word_len + 1) * 8);
 
 	free(msg->tx_buf);
 	free(msg->rx_buf);
@@ -249,320 +566,22 @@ int32_t spi_write_and_read(spi_desc *desc,
 }
 
 /***************************************************************************//**
-* @brief spi_eng_program_add_cmd
-*******************************************************************************/
-void spi_eng_program_add_cmd(spi_eng_transfer_fifo *xfer,
-			     uint16_t cmd)
-{
-	xfer->cmd_fifo[xfer->cmd_fifo_len] = cmd;
-	xfer->cmd_fifo_len++;
-}
-
-/***************************************************************************//**
-* @brief get_sleep_div
-*******************************************************************************/
-#ifdef DUAL_SPI
-uint32_t spi_get_sleep_div(spi_eng_desc *desc,
-			   uint32_t sleep_time_ns)
-#else
-uint32_t spi_get_sleep_div(spi_desc *desc,
-			   uint32_t sleep_time_ns)
-#endif
-{
-	uint32_t sleep_div = 0;
-
-	sleep_div = (desc->ref_clk_hz / 1000000 * sleep_time_ns / 1000) /
-		    ((desc->clk_div + 1) * 2) - 1;
-
-	return sleep_div;
-}
-
-/***************************************************************************//**
-* @brief spi_eng_gen_cs
-*******************************************************************************/
-#ifdef DUAL_SPI
-void spi_eng_gen_cs(spi_eng_desc *desc,
-		    spi_eng_transfer_fifo *xfer,
-		    bool assert)
-#else
-void spi_eng_gen_cs(spi_desc *desc,
-		    spi_eng_transfer_fifo *xfer,
-		    bool assert)
-#endif
-{
-	uint8_t mask = 0xff;
-
-	if (!assert)
-		mask ^= BIT(desc->chip_select);
-
-	spi_eng_program_add_cmd(xfer, SPI_ENGINE_CMD_ASSERT(desc->cs_delay, mask));
-}
-
-/***************************************************************************//**
-* @brief spi_eng_gen_transfer
-*******************************************************************************/
-#ifdef DUAL_SPI
-int32_t spi_eng_gen_transfer(spi_eng_desc *desc,
-			     spi_eng_transfer_fifo *xfer,
-			     bool write,
-			     bool read,
-			     uint8_t bytes_number)
-#else
-int32_t spi_eng_gen_transfer(spi_desc *desc,
-			     spi_eng_transfer_fifo *xfer,
-			     bool write,
-			     bool read,
-			     uint8_t bytes_number)
-#endif
-{
-	uint8_t words_number;
-
-	words_number = spi_get_words_number(desc, bytes_number);
-
-	spi_eng_program_add_cmd(xfer,
-				SPI_ENGINE_CMD_TRANSFER(write,
-						read,
-						words_number - 1));
-	return 0;
-}
-
-/***************************************************************************//**
-* @brief spi_gen_sleep_ns
-*******************************************************************************/
-#ifdef DUAL_SPI
-void spi_gen_sleep_ns(spi_eng_desc *desc,
-		      spi_eng_transfer_fifo *xfer,
-		      uint32_t sleep_time_ns)
-#else
-void spi_gen_sleep_ns(spi_desc *desc,
-		      spi_eng_transfer_fifo *xfer,
-		      uint32_t sleep_time_ns)
-#endif
-{
-	uint32_t sleep_div;
-
-	sleep_div = spi_get_sleep_div(desc, sleep_time_ns); // default 5us
-	// Wait for the device to do the conversion
-	spi_eng_program_add_cmd(xfer,
-				SPI_ENGINE_CMD_SLEEP(sleep_div));
-}
-
-/***************************************************************************//**
-* @brief check_dma_config
-*******************************************************************************/
-#ifdef DUAL_SPI
-uint8_t spi_check_dma_config(spi_eng_desc *desc,
-			     uint8_t rx,
-			     uint8_t tx)
-#else
-uint8_t spi_check_dma_config(spi_desc *desc,
-			     uint8_t rx,
-			     uint8_t tx)
-#endif
-{
-	if(desc->offload_configured) {
-		if(rx && !desc->spi_offload_rx_support_en)
-			return 0;
-
-		if(tx && !desc->spi_offload_tx_support_en)
-			return 0;
-	}
-	return 1;
-}
-
-/***************************************************************************//**
-* @brief spi_eng_add_user_cmd
-*******************************************************************************/
-#ifdef DUAL_SPI
-void spi_eng_add_user_cmd(spi_eng_desc *desc,
-			  spi_eng_transfer_fifo *xfer,
-			  uint32_t cmd)
-#else
-void spi_eng_add_user_cmd(spi_desc *desc,
-			  spi_eng_transfer_fifo *xfer,
-			  uint32_t cmd)
-#endif
-{
-	uint32_t cmd_msk = (0xF << 28);
-	uint32_t param_msk = cmd & (~cmd_msk);
-	uint32_t command;
-	uint16_t param;
-
-	command = (cmd & cmd_msk);
-	param = (cmd & param_msk);
-
-	switch(command) {
-	case CS_DEASSERT:
-		spi_eng_gen_cs(desc, xfer, false); // reset chip select
-		break;
-
-	case CS_ASSERT:
-		spi_eng_gen_cs(desc, xfer, true); // set chip select
-		break;
-
-	case SLEEP_CMD:
-		spi_gen_sleep_ns(desc, xfer, param); // Sleep
-		break;
-
-	case TRANSFER_R_CMD:
-		if(spi_check_dma_config(desc, 1, 0)) {
-			spi_eng_gen_transfer(desc, xfer, false, true, param); // read
-			desc->rx_length = param;
-		} else {
-			printf("%s: DMA Rx not configured.\n", __func__);
-			desc->rx_length = 0;
-		}
-
-		break;
-
-	case TRANSFER_W_CMD:
-		if(spi_check_dma_config(desc, 0, 1)) {
-			spi_eng_gen_transfer(desc, xfer, true, false, param); // write
-			desc->tx_length = param;
-		} else {
-			printf("%s: DMA Tx not configured.\n", __func__);
-			desc->tx_length = 0;
-		}
-		break;
-
-	case TRANSFER_R_W_CMD:
-		if(spi_check_dma_config(desc, 1, 1)) {
-			spi_eng_gen_transfer(desc, xfer, true, true, param); // read and write
-			desc->tx_length = param;
-			desc->rx_length = param;
-		} else {
-			printf("%s: DMA Rx and Tx not configured.\n", __func__);
-			desc->tx_length = 0;
-			desc->rx_length = 0;
-		}
-		break;
-
-	default:
-		break;
-	}
-}
-
-/***************************************************************************//**
-* @brief spi_eng_compile_message
-*******************************************************************************/
-#ifdef DUAL_SPI
-int32_t spi_eng_compile_message(spi_eng_desc *desc,
-				spi_eng_msg *msg,
-				spi_eng_transfer_fifo *xfer)
-#else
-int32_t spi_eng_compile_message(spi_desc *desc,
-				spi_eng_msg *msg,
-				spi_eng_transfer_fifo *xfer)
-#endif
-{
-	uint32_t i, n = 0;
-
-	n = msg->msg_cmd_len;
-
-	// configure prescale
-	spi_eng_program_add_cmd(xfer,
-				SPI_ENGINE_CMD_WRITE(SPI_ENGINE_CMD_REG_CLK_DIV,
-						desc->clk_div));
-	// SPI configuration (3W/CPOL/CPHA)
-	spi_eng_program_add_cmd(xfer,
-				SPI_ENGINE_CMD_WRITE(SPI_ENGINE_CMD_REG_CONFIG,
-						desc->spi_config));
-
-	// Data transfer length
-	spi_eng_program_add_cmd(xfer,
-				SPI_ENGINE_CMD_WRITE(SPI_ENGINE_CMD_DATA_TRANSFER_LEN,
-						desc->data_width));
-
-	// SYNC to signal transfer beginning
-	spi_eng_program_add_cmd(xfer,
-				SPI_ENGINE_CMD_SYNC(SPI_ENGINE_SYNC_TRANSFER_BEGIN));
-
-	for (i = 0; i < n; i++)
-		spi_eng_add_user_cmd(desc, xfer, msg->spi_msg_cmds[i]);
-
-	// SYNC to signal transfer end
-	spi_eng_program_add_cmd(xfer,
-				SPI_ENGINE_CMD_SYNC(SPI_ENGINE_SYNC_TRANSFER_END));
-
-	return 0;
-}
-
-/***************************************************************************//**
-* @brief spi_eng_transfer_message
-*******************************************************************************/
-#ifdef DUAL_SPI
-int32_t spi_eng_transfer_message(spi_eng_desc *desc, spi_eng_msg *msg)
-#else
-int32_t spi_eng_transfer_message(spi_desc *desc, spi_eng_msg *msg)
-#endif
-{
-	spi_eng_transfer_fifo *xfer;
-	uint32_t size;
-	uint32_t i;
-	uint32_t data;
-	uint32_t sync_id;
-
-	size = sizeof(*xfer->cmd_fifo) * (msg->msg_cmd_len + 3);
-
-	xfer = (spi_eng_transfer_fifo *)malloc(sizeof(*xfer) + size);
-	if (!xfer)
-		return -1;
-
-	xfer->cmd_fifo_len = 0;
-	spi_eng_compile_message(desc, msg, xfer);
-
-	// CMD FIFO
-	for (i = 0; i < xfer->cmd_fifo_len; i++)
-		spi_eng_write(desc, SPI_ENGINE_REG_CMD_FIFO, xfer->cmd_fifo[i]);
-
-	/*
-	 * On each spi write command, one word is transfered. Typically 16 bits
-	 * tx_length = param is deduced from TRANSFER_W(param)
-	 */
-	for(i = 0; i < desc->tx_length; i++)
-		spi_eng_write(desc, SPI_ENGINE_REG_SDO_DATA_FIFO, msg->tx_buf[i]);
-
-
-	/*
-	 *	Wait for all the transactions to finish
-	 *
-	 */
-
-	do spi_eng_read(desc, SPI_ENGINE_REG_SYNC_ID, &sync_id);
-	while(sync_id != SPI_ENGINE_SYNC_TRANSFER_END);
-
-	/*
-	 * On each spi read command, one word is transfered. Typically 16 bits.
-	 * rx_length = param is deduced from TRANSFER_R(param)
-	 */
-	for(i = 0; i < desc->rx_length; i++) {
-		spi_eng_read(desc, SPI_ENGINE_REG_SDI_DATA_FIFO, &data);
-		msg->rx_buf[i] = data;
-	}
-
-	free(xfer);
-
-	return 0;
-}
-
-/***************************************************************************//**
 * @brief spi_eng_offload_load_msg
 *******************************************************************************/
-#ifdef DUAL_SPI
-int32_t spi_eng_offload_load_msg(spi_eng_desc *desc, spi_eng_msg *msg)
-#else
 int32_t spi_eng_offload_load_msg(spi_desc *desc, spi_eng_msg *msg)
-#endif
 {
 	uint32_t i, size;
 	spi_eng_transfer_fifo *xfer;
 	uint8_t words_number;
+	spi_desc_extra		*desc_extra;
 
-	desc->rx_dma_startaddr = msg->rx_buf_addr;
-	desc->tx_dma_startaddr = msg->tx_buf_addr;
+	desc_extra = cast_to_extra_desc(desc->extra);
 
-	if(desc->spi_offload_rx_support_en || desc->spi_offload_tx_support_en)
-		desc->offload_configured = 1;
+	desc_extra->rx_dma_startaddr = msg->rx_buf_addr;
+	desc_extra->tx_dma_startaddr = msg->tx_buf_addr;
+
+	if(desc_extra->spi_offload_rx_support_en || desc_extra->spi_offload_tx_support_en)
+		desc_extra->offload_configured = 1;
 
 	size = sizeof(*xfer->cmd_fifo) * (msg->msg_cmd_len + 3);
 
@@ -576,12 +595,12 @@ int32_t spi_eng_offload_load_msg(spi_desc *desc, spi_eng_msg *msg)
 
 	// CMD OFFLOAD
 	for (i = 0; i < xfer->cmd_fifo_len; i++)
-		spi_eng_write(desc, SPI_ENGINE_REG_OFFLOAD_CMD_MEM(0), xfer->cmd_fifo[i]);
+		spi_eng_write(desc_extra, SPI_ENGINE_REG_OFFLOAD_CMD_MEM(0), xfer->cmd_fifo[i]);
 
 	// TX OFFLOAD
-	words_number = spi_get_words_number(desc, desc->tx_length);
+	words_number = spi_get_words_number(desc_extra, desc_extra->tx_length);
 	for(i = 0; i < words_number; i++)
-		spi_eng_write(desc, SPI_ENGINE_REG_OFFLOAD_SDO_MEM(0), msg->tx_buf[i]);
+		spi_eng_write(desc_extra, SPI_ENGINE_REG_OFFLOAD_SDO_MEM(0), msg->tx_buf[i]);
 
 	free(xfer);
 
@@ -591,115 +610,62 @@ int32_t spi_eng_offload_load_msg(spi_desc *desc, spi_eng_msg *msg)
 /***************************************************************************//**
 * @brief spi_eng_transfer_multiple_msgs
 *******************************************************************************/
-#ifdef DUAL_SPI
-int32_t spi_eng_transfer_multiple_msgs(spi_eng_desc *desc,
-				       uint32_t no_of_messages)
-#else
 int32_t spi_eng_transfer_multiple_msgs(spi_desc *desc, uint32_t no_of_messages)
-#endif
 {
 	uint8_t alignment;
+	spi_desc_extra		*desc_extra;
 
-	if(!desc->offload_configured)
+	desc_extra = cast_to_extra_desc(desc->extra);
+
+	if(!desc_extra->offload_configured)
 		return -1;
 
-	if (desc->data_width > 16)
+	if (desc_extra->data_width > 16)
 		alignment = sizeof(uint32_t);
 	else
 		alignment = sizeof(uint16_t);
 
-	if(desc->rx_length) {
-		desc->rx_length = alignment * no_of_messages;
+	if(desc_extra->rx_length) {
+		desc_extra->rx_length = alignment * no_of_messages;
 
-		spi_eng_dma_write(desc, DMAC_REG_CTRL, 0x0);
-		spi_eng_dma_write(desc, DMAC_REG_CTRL, DMAC_CTRL_ENABLE);
-		spi_eng_dma_write(desc, DMAC_REG_IRQ_MASK, 0x0);
+		spi_eng_dma_write(desc_extra, DMAC_REG_CTRL, 0x0);
+		spi_eng_dma_write(desc_extra, DMAC_REG_CTRL, DMAC_CTRL_ENABLE);
+		spi_eng_dma_write(desc_extra, DMAC_REG_IRQ_MASK, 0x0);
 
-		spi_eng_dma_write(desc, DMAC_REG_IRQ_PENDING, 0xff);
+		spi_eng_dma_write(desc_extra, DMAC_REG_IRQ_PENDING, 0xff);
 
-		spi_eng_dma_write(desc, DMAC_REG_DEST_ADDRESS, desc->rx_dma_startaddr);
-		spi_eng_dma_write(desc, DMAC_REG_DEST_STRIDE, 0x0);
-		spi_eng_dma_write(desc, DMAC_REG_X_LENGTH, desc->rx_length - 1);
-		spi_eng_dma_write(desc, DMAC_REG_Y_LENGTH, 0x0);
+		spi_eng_dma_write(desc_extra, DMAC_REG_DEST_ADDRESS, desc_extra->rx_dma_startaddr);
+		spi_eng_dma_write(desc_extra, DMAC_REG_DEST_STRIDE, 0x0);
+		spi_eng_dma_write(desc_extra, DMAC_REG_X_LENGTH, desc_extra->rx_length - 1);
+		spi_eng_dma_write(desc_extra, DMAC_REG_Y_LENGTH, 0x0);
 
-		spi_eng_dma_write(desc, DMAC_REG_START_TRANSFER, 0x1);
+		spi_eng_dma_write(desc_extra, DMAC_REG_START_TRANSFER, 0x1);
 	}
 
-	if(desc->tx_length) {
-		desc->tx_length = alignment * no_of_messages;
+	if(desc_extra->tx_length) {
+		desc_extra->tx_length = alignment * no_of_messages;
 
-		spi_eng_dma_write(desc, DMAC_REG_CTRL, 0x0);
-		spi_eng_dma_write(desc, DMAC_REG_CTRL, DMAC_CTRL_ENABLE);
-		spi_eng_dma_write(desc, DMAC_REG_IRQ_MASK, 0x0);
+		spi_eng_dma_write(desc_extra, DMAC_REG_CTRL, 0x0);
+		spi_eng_dma_write(desc_extra, DMAC_REG_CTRL, DMAC_CTRL_ENABLE);
+		spi_eng_dma_write(desc_extra, DMAC_REG_IRQ_MASK, 0x0);
 
-		spi_eng_dma_write(desc, DMAC_REG_IRQ_PENDING, 0xff);
+		spi_eng_dma_write(desc_extra, DMAC_REG_IRQ_PENDING, 0xff);
 
-		spi_eng_dma_write(desc, DMAC_REG_SRC_ADDRESS, desc->tx_dma_startaddr);
-		spi_eng_dma_write(desc, DMAC_REG_SRC_STRIDE, 0x0);
-		spi_eng_dma_write(desc, DMAC_REG_X_LENGTH, desc->rx_length - 1);
-		spi_eng_dma_write(desc, DMAC_REG_Y_LENGTH, 0x0);
-		spi_eng_dma_write(desc, DMAC_REG_FLAGS, 0x1);
+		spi_eng_dma_write(desc_extra, DMAC_REG_SRC_ADDRESS, desc_extra->tx_dma_startaddr);
+		spi_eng_dma_write(desc_extra, DMAC_REG_SRC_STRIDE, 0x0);
+		spi_eng_dma_write(desc_extra, DMAC_REG_X_LENGTH, desc_extra->rx_length - 1);
+		spi_eng_dma_write(desc_extra, DMAC_REG_Y_LENGTH, 0x0);
+		spi_eng_dma_write(desc_extra, DMAC_REG_FLAGS, 0x1);
 
-		spi_eng_dma_write(desc, DMAC_REG_START_TRANSFER, 0x1);
+		spi_eng_dma_write(desc_extra, DMAC_REG_START_TRANSFER, 0x1);
 	}
 
 	usleep(100000);
 	// Enable SPI engine
-	spi_eng_write(desc, SPI_ENGINE_REG_OFFLOAD_CTRL(0), 0x0001);
+	spi_eng_write(desc_extra, SPI_ENGINE_REG_OFFLOAD_CTRL(0), 0x0001);
 
-	desc->offload_configured = 0;
+	desc_extra->offload_configured = 0;
 
-	return 0;
-}
-
-/***************************************************************************//**
-* @brief spi_eng_init
-*******************************************************************************/
-#ifdef DUAL_SPI
-int32_t spi_eng_init(spi_eng_desc **descriptor,
-		     spi_eng_init_param init_param)
-#else
-int32_t spi_init(spi_desc **descriptor,
-		 spi_init_param init_param)
-#endif
-{
-#ifdef DUAL_SPI
-	spi_eng_desc		*desc;
-	desc = (spi_eng_desc *)malloc(sizeof(*desc));
-#else
-	spi_desc		*desc;
-	desc = (spi_desc *)malloc(sizeof(*desc));
-#endif
-	if (!desc)
-		return -1;
-
-	uint32_t        data_width;
-
-	desc->spi_baseaddr = init_param.spi_baseaddr;
-	desc->spi_clk_hz = init_param.spi_clk_hz;
-	desc->ref_clk_hz = init_param.ref_clk_hz;
-	desc->chip_select = init_param.chip_select;
-	desc->spi_config = init_param.spi_config;
-	desc->rx_length = 0;
-	desc->tx_length = 0;
-
-	desc->clk_div = desc->ref_clk_hz / (2 * desc->spi_clk_hz) - 1;
-
-	desc->spi_offload_rx_support_en = init_param.spi_offload_rx_support_en;
-	desc->spi_offload_tx_support_en = init_param.spi_offload_tx_support_en;
-	desc->spi_offload_tx_dma_baseaddr = init_param.spi_offload_tx_dma_baseaddr;
-	desc->spi_offload_rx_dma_baseaddr = init_param.spi_offload_rx_dma_baseaddr;
-
-	// perform a reset
-	spi_eng_write(desc, SPI_ENGINE_REG_RESET, 0x01);
-	usleep(100000);
-	spi_eng_write(desc, SPI_ENGINE_REG_RESET, 0x00);
-
-	spi_eng_read(desc, SPI_ENGINE_REG_DATA_WIDTH, &data_width);
-	desc->max_data_width = data_width;
-	spi_set_transfer_length(desc, desc->max_data_width);
-
-	*descriptor = desc;
 	return 0;
 }
 
@@ -708,11 +674,7 @@ int32_t spi_init(spi_desc **descriptor,
  * @param desc - The SPI descriptor.
  * @return 0 in case of success, -1 otherwise.
  */
-#ifdef DUAL_SPI
-int32_t spi_eng_remove(spi_eng_desc *desc)
-#else
 int32_t spi_remove(spi_desc *desc)
-#endif
 {
 	free(desc);
 
