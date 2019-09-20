@@ -47,6 +47,12 @@
 #include "ad77681.h"
 
 /******************************************************************************/
+/********************************* Macros *************************************/
+/******************************************************************************/
+
+#define ARRAY_SIZE(x)	(sizeof(x) / sizeof((x)[0]))
+
+/******************************************************************************/
 /************************** Functions Implementation **************************/
 /******************************************************************************/
 /**
@@ -111,7 +117,7 @@ int32_t ad77681_spi_reg_read(struct ad77681_dev *dev,
 	uint8_t buf[3];
 	uint8_t word_len = (dev->crc_sel == AD77681_NO_CRC) ? 16 : 24;
 
-	spi_set_transfer_length(dev->spi_desc, word_len);
+	spi_set_transfer_length(dev->spi_desc,word_len);
 
 	buf[0] = AD77681_REG_READ(reg_addr);
 	buf[1] = 0x00;
@@ -140,7 +146,7 @@ int32_t ad77681_spi_reg_write(struct ad77681_dev *dev,
 
 	buf[0] = AD77681_REG_WRITE(reg_addr);
 	buf[1] = reg_data;
-
+	spi_set_transfer_length(dev->spi_desc,16);
 	return spi_write_and_read(dev->spi_desc, buf, ARRAY_SIZE(buf));
 }
 
@@ -230,13 +236,13 @@ int32_t ad77681_spi_read_adc_data(struct ad77681_dev *dev,
 	buf[3] = 0x00;
 
 
-	ret |= ad77681_spi_write_mask(dev,
+	ad77681_spi_write_mask(dev,
 			       AD77681_REG_CONVERSION,
 			       AD77681_CONVERSION_MODE_MSK,
 			       AD77681_CONVERSION_MODE(AD77681_CONV_SINGLE));
 	spi_set_transfer_length(dev->spi_desc,32);
 	ret |= spi_write_and_read(dev->spi_desc, buf, rx_tx_buf_len);
-	ret |= ad77681_spi_write_mask(dev,
+	ad77681_spi_write_mask(dev,
 			       AD77681_REG_CONVERSION,
 			       AD77681_CONVERSION_MODE_MSK,
 			       AD77681_CONVERSION_MODE(AD77681_CONV_CONTINUOUS));
@@ -483,9 +489,7 @@ int32_t ad77681_setup(struct ad77681_dev **device,
 	dev->crc_sel = init_param.crc_sel;
 	dev->status_bit = init_param.status_bit;
 
-	spi_init(&dev->spi_desc, init_param.spi_eng_dev_init);
-	spi_set_transfer_length(dev->spi_desc, init_param.data_width);
-
+	spi_init(&dev->spi_desc, &init_param.spi_eng_dev_init);
 	ret |= ad77681_soft_reset(dev);
 	ret |= ad77681_set_power_mode(dev, dev->power_mode);
 	ret |= ad77681_set_mclk_div(dev, dev->mclk_div);

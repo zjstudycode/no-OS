@@ -192,11 +192,7 @@
 /*************************** Types Declarations *******************************/
 /******************************************************************************/
 
-/*************************** SPI INIT PARAMS*******************************/
-
-
-
-typedef struct spi_init_param_extra{
+typedef struct spi_init_param_extra {
 	uint32_t 	spi_clk_hz;
 	uint32_t 	spi_baseaddr;
 	uint8_t		cs_delay;
@@ -205,21 +201,16 @@ typedef struct spi_init_param_extra{
 	uint8_t		spi_offload_tx_support_en;
 	uint32_t	spi_offload_tx_dma_baseaddr;
 	uint32_t	spi_clk_hz_reg_access;
-}spi_init_param_extra;
+} spi_init_param_extra;
 
-typedef struct spi_eng_init_param{
+typedef struct spi_eng_init_param {
 	uint32_t	max_speed_hz;
 	uint8_t		chip_select;
 	enum spi_mode	mode;
 	struct spi_init_param_extra 	extra;
-}spi_eng_init_param;
+} spi_eng_init_param;
 
-
-
-/*************************** SPI DESC *******************************/
-
-
-typedef struct spi_desc_extra{
+typedef struct spi_desc_extra {
 	uint32_t 	spi_clk_hz;
 	uint32_t	spi_baseaddr;
 	uint8_t		cs_delay;
@@ -236,16 +227,16 @@ typedef struct spi_desc_extra{
 	uint8_t		offload_configured;
 	uint8_t		data_width;
 	uint8_t 	max_data_width;
-}spi_desc_extra;
+} spi_desc_extra;
 
-typedef struct spi_eng_desc{
+typedef struct spi_eng_desc {
 	uint32_t	max_speed_hz;
 	uint8_t		chip_select;
 	enum spi_mode	mode;
 	struct spi_desc_extra	extra;
-}spi_eng_desc;
+} spi_eng_desc;
 
-typedef struct spi_eng_msg{
+typedef struct spi_eng_msg {
 	uint32_t	tx_buf_addr;
 	uint32_t	rx_buf_addr;
 	uint32_t	*rx_buf;
@@ -254,11 +245,13 @@ typedef struct spi_eng_msg{
 	uint8_t		msg_cmd_len;
 } spi_eng_msg;
 
-typedef struct spi_eng_transfer_fifo{
+typedef struct spi_eng_transfer_fifo {
 	uint32_t	cmd_fifo_len;
 	uint16_t	cmd_fifo[];
 } spi_eng_transfer_fifo;
 
 void spi_set_transfer_length(spi_desc *desc, uint8_t data_length);
+int32_t spi_eng_offload_load_msg(spi_desc *desc, spi_eng_msg *msg);
+int32_t spi_eng_transfer_multiple_msgs(spi_desc *desc, uint32_t no_of_messages);
 
 #endif // SPI_ENGINE_H
