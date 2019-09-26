@@ -40,7 +40,10 @@
 /******************************************************************************/
 /***************************** Include Files **********************************/
 /******************************************************************************/
+#include <string.h>
+#include <stdlib.h>
 #include "util.h"
+#include "errno.h"
 
 /******************************************************************************/
 /************************** Functions Implementation **************************/
@@ -187,4 +190,47 @@ uint64_t div_u64(uint64_t dividend, uint32_t divisor)
 	uint32_t remainder;
 
 	return div_u64_rem(dividend, divisor, &remainder);
+}
+
+/**
+ * Compare two strings
+ * @param *str1 pointer to string 1
+ * @param *str2 pointer to string 2
+ * @return TRUE if strings are equal, 0 otherwise
+ */
+bool strequal(const char *str1, const char *str2)
+{
+	return !strcmp(str1, str2);
+}
+
+/**
+ * Converts from string to long value
+ * @param *str
+ * @return long value
+ */
+int32_t read_value(const char *str)
+{
+	char *end;
+	int32_t value = strtol(str, &end, 0);
+
+	if (end == str)
+		return -EINVAL;
+	else
+		return value;
+}
+
+/**
+ * Converts from string to unsigned long value
+ * @param *str
+ * @return long value
+ */
+uint32_t read_ul_value(const char *str)
+{
+	char *end;
+	uint32_t value = strtoul(str, &end, 0);
+
+	if (end == str)
+		return -EINVAL;
+	else
+		return value;
 }

@@ -43,7 +43,7 @@
 /***************************** Include Files **********************************/
 /******************************************************************************/
 #include <stdint.h>
-
+#include <stdbool.h>
 /******************************************************************************/
 /********************** Macros and Constants Definitions **********************/
 /******************************************************************************/
@@ -74,8 +74,8 @@
 #define clamp_t(type, val, min_val, max_val) \
 	(type)clamp((type)(val), (type)(min_val), (type)(max_val))
 
-#define abs(x) \
-	((x) < 0 ? (-x) : (x))
+//#define abs(x) \
+//	((x) < 0 ? (-x) : (x))
 
 #define swap(x, y) \
 	{typeof(x) _tmp_ = (x); (x) = (y); (y) = _tmp_;}
@@ -126,5 +126,8 @@ uint64_t div64_u64_rem(uint64_t dividend, uint64_t divisor, uint64_t *remainder)
 uint64_t div_u64_rem(uint64_t dividend, uint32_t divisor, uint32_t *remainder);
 /* Unsigned 64bit divide with 32bit divisor */
 uint64_t div_u64(uint64_t dividend, uint32_t divisor);
+bool strequal(const char *str1, const char *str2);
+int32_t read_value(const char *str);
+uint32_t read_ul_value(const char *str);
 #endif // UTIL_H_
 

@@ -42,6 +42,23 @@
 #include "talise_arm_binary.h"
 #include "talise_stream_binary.h"
 
+#define USE_LIBIIO
+#define UART_INTERFACE
+
+#ifdef USE_LIBIIO
+
+#ifdef UART_INTERFACE
+#include "serial.h"
+#endif // UART_INTERFACE
+
+#include "tinyiiod.h"
+#include "tinyiiod_axi_adc.h"
+#include "tinyiiod_util.h"
+#include "tinyiiod_types.h"
+
+#endif // USE_LIBIIO
+
+
 /**********************************************************/
 /**********************************************************/
 /********** Talise Data Structure Initializations ********/
@@ -793,6 +810,59 @@ int main(void)
 #ifndef ALTERA_PLATFORM
 	Xil_DCacheInvalidateRange(XPAR_DDR_MEM_BASEADDR + 0x800000, 16384 * 8);
 #endif
+
+#ifdef USE_LIBIIO
+	struct tinyiiod *iiod;
+	int32_t ret;
+	tinyiiod_adc_init_par tinyiiod_adc_init_par = {
+		.adc = rx_adc,
+		.dmac = rx_dmac,
+		.adc_ddr_base = DDR_MEM_BASEADDR,
+	};
+	tinyiiod_adc *tinyiiod_adc;
+
+	tinyiiod_comm_ops comm_ops = {
+		.read = serial_read,
+		.read_line = serial_read_line,
+		.write = serial_write_data,
+	};
+
+	tinyiiod_device_init_par tinyiiod_adc_device_init_par;
+
+
+	ret = tinyiiod_axi_adc_init(&tinyiiod_adc, &tinyiiod_adc_init_par);
+	if(ret < 0)
+		return ret;
+
+	tinyiiod_adc_device_init_par.name = tinyiiod_adc->adc->name,
+	tinyiiod_adc_device_init_par.number_of_channels =
+		tinyiiod_adc->adc->num_channels,
+		tinyiiod_adc_device_init_par.pointer = tinyiiod_adc,
+		tinyiiod_adc_device_init_par.attr_map = get_adc_attr_map(
+					tinyiiod_adc->adc->name),
+				tinyiiod_adc_device_init_par.get_device_xml = get_adc_xml,
+
+				ret = tinyiiod_register_device(&tinyiiod_adc_device_init_par);
+	if(ret < 0)
+		return ret;
+
+	ret = iiod_create(&iiod, &comm_ops);
+	if(ret < 0)
+		return ret;
+
+	ret = serial_init();
+	if(ret < 0)
+		return ret;
+
+	while(1) {
+		ret = tinyiiod_read_command(iiod);
+		if(ret < 0)
+			return ret;
+	}
+
+#endif // USE_LIBIIO
+
+
 
 	/***********************************************
 	* Shutdown Procedure *

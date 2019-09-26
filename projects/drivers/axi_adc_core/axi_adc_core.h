@@ -89,6 +89,9 @@ int32_t axi_adc_set_pnsel(struct axi_adc *adc,
 void axi_adc_idelay_set(struct axi_adc *adc,
 			uint32_t lane,
 			uint32_t val);
+int32_t axi_adc_get_sampling_freq(struct axi_adc *adc,
+				uint32_t chan,
+				uint64_t *sampling_freq);
 int32_t axi_adc_set_calib_phase(struct axi_adc *adc,
 				uint32_t chan,
 				int32_t val,
