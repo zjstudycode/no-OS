@@ -591,6 +591,12 @@ int main(void)
 	};
 	tinyiiod_dac *tinyiiod_dac;
 
+	tinyiiod_comm_ops comm_ops = {
+	    .read = serial_read,
+	    .read_line = serial_read_line,
+	    .write = serial_write_data,
+	};
+
 	ret = axi_dmac_init(&ad9361_phy->tx_dmac, default_init_param.tx_dmac_init);
 	if(ret < 0)
 		return ret;
@@ -618,8 +624,7 @@ int main(void)
 	if(ret < 0)
 		return ret;
 
-	/* Create the ad9361_tinyiiod */
-	ret = iiod_create(&iiod);
+	ret = iiod_create(&iiod, &comm_ops);
 	if(ret < 0)
 		return ret;
 
