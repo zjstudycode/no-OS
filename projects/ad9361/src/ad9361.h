@@ -3317,7 +3317,7 @@ enum dev_id {
 };
 
 struct ad9361_rf_phy {
-	const char *name;
+	char *name;
 	enum dev_id		dev_sel;
 	uint8_t 		id_no;
 	struct spi_desc 	*spi;
@@ -3541,4 +3541,5 @@ int32_t ad9361_get_temp(struct ad9361_rf_phy *phy);
 int32_t ad9361_synth_lo_powerdown(struct ad9361_rf_phy *phy,
 				  enum synth_pd_ctrl rx,
 				  enum synth_pd_ctrl tx);
+void ad9361_clear_state(struct ad9361_rf_phy *phy);
 #endif

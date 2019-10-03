@@ -44,13 +44,17 @@
 #include "config.h"
 #include "ad9361_api.h"
 #include "ad9361_parameters.h"
-#include "platform_drivers.h"
+#include "spi.h"
+#include "gpio.h"
+#include "axi_io.h"
 #ifdef XILINX_PLATFORM
+#include "xilinx_platform_drivers.h"
 #include <xil_cache.h>
 #endif
 #include "axi_adc_core.h"
 #include "axi_dac_core.h"
 #include "axi_dmac.h"
+
 
 #ifdef USE_LIBIIO
 #ifdef UART_INTERFACE
@@ -69,24 +73,31 @@ struct axi_adc_init rx_adc_init = {
 	"cf-ad9361-lpc",
 	RX_CORE_BASEADDR,
 	4,
+	axi_io_read,
+	axi_io_write
 };
-
 struct axi_dac_init tx_dac_init = {
 	"cf-ad9361-dds-core-lpc",
 	TX_CORE_BASEADDR,
 	4,
+	axi_io_read,
+	axi_io_write
 };
 struct axi_dmac_init rx_dmac_init = {
 	"rx_dmac",
 	CF_AD9361_RX_DMA_BASEADDR,
 	DMA_DEV_TO_MEM,
 	0,
+	axi_io_read,
+	axi_io_write
 };
 struct axi_dmac_init tx_dmac_init = {
 	"tx_dmac",
 	CF_AD9361_TX_DMA_BASEADDR,
 	DMA_MEM_TO_DEV,
 	0,
+	axi_io_read,
+	axi_io_write
 };
 
 AD9361_InitParam default_init_param = {
@@ -397,7 +408,8 @@ struct ad9361_rf_phy *ad9361_phy;
 struct ad9361_rf_phy *ad9361_phy_b;
 #endif
 
-struct spi_init_param spi_param = {.id = SPI_DEVICE_ID, .mode = SPI_MODE_1, .chip_select = CLK_CS, .flags = 0};
+struct xil_spi_init_param xil_spi_param = {.id = SPI_DEVICE_ID, .flags = 0};
+struct spi_init_param spi_param = {.mode = SPI_MODE_1, .chip_select = SPI_CS};
 
 /***************************************************************************//**
  * @brief main
@@ -405,13 +417,14 @@ struct spi_init_param spi_param = {.id = SPI_DEVICE_ID, .mode = SPI_MODE_1, .chi
 int main(void)
 {
 	int32_t status;
-#ifdef	USE_LIBIIO
-	struct tinyiiod *iiod;
-#endif
-
 #ifdef XILINX_PLATFORM
 	Xil_ICacheEnable();
 	Xil_DCacheEnable();
+	spi_param.extra = &xil_spi_param;
+#endif
+
+#ifdef	USE_LIBIIO
+	struct tinyiiod *iiod;
 #endif
 
 #ifdef ALTERA_PLATFORM
@@ -497,7 +510,7 @@ int main(void)
 		return status;
 	}
 	gpio_direction_output(default_init_param.gpio_desc_sync, 1);
-	default_init_param.id_no = 1;
+	default_init_param.id_no = SPI_CS_2;
 	default_init_param.gpio_resetb = GPIO_RESET_PIN_2;
 #ifdef LINUX_PLATFORM
 	gpio_init(default_init_param.gpio_resetb);
@@ -514,6 +527,18 @@ int main(void)
 		return status;
 	}
 	gpio_direction_output(default_init_param.gpio_desc_resetb, 1);
+
+	rx_adc_init.base = AD9361_RX_1_BASEADDR;
+	tx_dac_init.base = AD9361_TX_1_BASEADDR;
+
+	spi_param.chip_select = default_init_param.id_no;
+
+	status = spi_init(&default_init_param.spi, &spi_param);
+	if (status != SUCCESS) {
+		printf("spi_init() error: %"PRIi32"\n", status);
+		return status;
+	}
+
 	ad9361_init(&ad9361_phy_b, &default_init_param);
 
 	ad9361_set_tx_fir_config(ad9361_phy_b, tx_fir_config);
@@ -573,6 +598,8 @@ int main(void)
 #endif
 #endif
 #endif
+
+
 
 #ifdef USE_LIBIIO
 
