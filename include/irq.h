@@ -1,7 +1,7 @@
 /***************************************************************************//**
- *   @file   xilinx_platform_drivers.h
- *   @brief  Header file of Xilinx Platform Drivers.
- *   @author Antoniu Miclaus (antoniu.miclaus@analog.com)
+ *   @file   irq.h
+ *   @brief  Header file of IRQ interface.
+ *   @author Cristian Pop (cristian.pop@analog.com)
 ********************************************************************************
  * Copyright 2019(c) Analog Devices, Inc.
  *
@@ -37,98 +37,52 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
-#ifndef XILINX_PLATFORM_DRIVERS_H_
-#define XILINX_PLATFORM_DRIVERS_H_
-
-/******************************************************************************/
-/***************************** Include Files **********************************/
-/******************************************************************************/
-
-#include <xparameters.h>
-#ifdef _XPARAMETERS_PS_H_
-#include <xscugic.h>
-#include <xspips.h>
-#include <xgpiops.h>
-#include <xiic.h>
-#include <xil_exception.h>
-#else
-#include <xspi.h>
-#include <xgpio.h>
-#endif
-
-/******************************************************************************/
-/********************** Macros and Constants Definitions **********************/
-/******************************************************************************/
-
-#define SPI_CS_DECODE	0x01
+#ifndef IRQ_H_
+#define IRQ_H_
+#include <stdint.h>
 
 /******************************************************************************/
 /*************************** Types Declarations *******************************/
 /******************************************************************************/
 
-struct xil_irq_desc {
-#ifdef _XPARAMETERS_PS_H_
-	XScuGic 		*gic;
-#else
-#endif
-};
+struct irq_init_param {
+	uint32_t	irq_id;
+	void		*extra;
+} irq_init_param;
 
-typedef enum i2c_type {
-	XILINX_I2C
-} i2c_type;
+struct irq_desc {
+	uint32_t	irq_id;
+	void		*extra;
+} irq_desc;
 
-typedef struct xil_i2c_init_param {
-	enum i2c_type	type;
-	uint32_t	id;
-} xil_i2c_init_param;
+/******************************************************************************/
+/************************ Functions Declarations ******************************/
+/******************************************************************************/
 
-typedef struct xil_i2c_desc {
-	enum i2c_type	type;
-	uint32_t	id;
-#ifdef _XPARAMETERS_PS_H_
-	XIic_Config *config;
-	XIic instance;
-#else
-#endif
-} xil_i2c_desc;
+/* Initialize a interrupt controller peripheral. */
+int32_t irq_ctrl_init(struct irq_desc **desc,
+		      const struct irq_init_param *param);
 
-typedef enum spi_type {
-	XILINX_SPI
-} spi_type;
+/* Free the resources allocated by irq_ctrl_init(). */
+int32_t irq_ctrl_remove(struct irq_desc *desc);
 
-typedef struct xil_spi_init_param {
-	enum spi_type	type;
-	uint32_t	id;
-	uint32_t	flags;
-} xil_spi_init_param;
+/* Registers a generic IRQ handling function */
+int32_t irq_register(struct irq_desc *desc, uint32_t irq_id,
+		     void (*irq_handler)(void *data), void *dev_instance);
 
-typedef struct xil_spi_desc {
-	enum spi_type	type;
-	uint32_t		id;
-	uint32_t		flags;
-#ifdef _XPARAMETERS_PS_H_
-	XSpiPs_Config	*config;
-	XSpiPs			instance;
-#else
-	XSpi			instance;
-#endif
-} xil_spi_desc;
+/* Unregisters a generic IRQ handling function */
+int32_t irq_unregister(struct irq_desc *desc, uint32_t irq_id);
 
-typedef enum gpio_type {
-	XILINX_GPIO
-} gpio_type;
+/* Global interrupt enable */
+int32_t irq_enable(void);
 
-typedef struct xil_gpio_desc {
-	enum gpio_type	type;
-	uint32_t		id;
-#ifdef _XPARAMETERS_PS_H_
-	XGpioPs_Config	*config;
-	XGpioPs			instance;
-#else
-	XGpio			instance;
-#endif
-} xil_gpio_desc;
+/* Global interrupt disable */
+int32_t irq_disable(void);
 
-#endif // XILINX_PLATFORM_DRIVERS_H_
+/* Enable specific interrupt */
+int32_t irq_source_enable(struct irq_desc *desc, uint32_t irq_id);
 
+/* Disable specific interrupt */
+int32_t irq_source_disable(struct irq_desc *desc, uint32_t irq_id);
 
+#endif // IRQ_H_
